@@ -1,10 +1,12 @@
+import numpy as np
+
 q = 0.6791 #[e]
 
 l = 0.8724 #[Ang]
 
 z = 0.1594 #[Ang]
 
-theta = 103.6 #[deg]
+theta = np.radians(103.6) #[deg]
 
 sigma = 3.16655 #[Ang]
 
