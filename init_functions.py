@@ -42,8 +42,7 @@ def random_rot_velocity(I, T, dim = 3):
 
     
 if __name__ == "__main__":
-    print(random_velocity(h2O.M, 300))
     from H2O import H2O
-    m = H2O(3, T=100)
+    m = H2O(3, T=10)
     print(m.cm_vel)
     print(m.rot_vel)

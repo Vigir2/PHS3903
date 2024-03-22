@@ -70,24 +70,29 @@ class H2O:
         self.rand_orientation()
         self.cm_vel = init_func.random_velocity(h2O.M, self.T, self.dim)
         self.rot_vel = init_func.random_rot_velocity(self.inertia_tensor(), self.T, self.dim)
+    
+    def kinetic_energy(self, *args):
+        K = 0
+        if "T" in args[0]:
+            Kt = 1/2 * h2O.M * np.linalg.norm(self.cm_vel)**2
+            K += Kt
+        if "R" in args[0]:
+            J = self.inertia_tensor()@self.rot_vel
+            Kr = 1/2 * np.dot(self.rot_vel, J)
+            K += Kr
+        return K
 
-"""
-    def correct_pos(self):
-        for i in np.where(self.O_pos > simP.a):
+    def correct_cm_pos(self):
+        for i in np.where(self.cm_pos() > simP.a):
             self.O_pos[i] -= simP.a
-        for i in np.where(self.H1_pos > simP.a):
             self.H1_pos[i] -= simP.a
-        for i in np.where(self.H2_pos > simP.a):
             self.H2_pos[i] -= simP.a
-        for i in np.where(self.M_pos > simP.a):
             self.M_pos[i] -= simP.a
-"""
-
-
 
 
 if __name__ == "__main__":
     m = H2O(3)
-    print(m.cm_vel)
-    print(m.rot_vel)
-    m.d_inertia_tensor()
+    m.rand_position()
+    print(m.cm_pos())
+    m.correct_cm_pos()
+    print(m.cm_pos())
