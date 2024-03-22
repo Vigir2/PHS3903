@@ -40,3 +40,7 @@ Thumbs.db
 ###############
 *.bmp
 *.mp4
+
+# Output files
+#################
+*.xyz

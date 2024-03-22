@@ -2,7 +2,7 @@ import numpy as np
 
 N = 5
 
-a = 20 #[Ang]
+a = 10 #[Ang]
 
 b1 = np.array([1, 0, 0])
 b2 = np.array([0, 1, 0])
