@@ -1,7 +1,7 @@
 import numpy as np
-y = np.array([1,2,3])
+y = None
 
-if y is None:
+if y is not None:
     print("tes")
 else:
     print("no")

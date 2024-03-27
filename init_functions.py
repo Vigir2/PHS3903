@@ -40,6 +40,7 @@ def random_rot_velocity(I, T, dim = 3):
         out[i] = np.random.normal(0, sigma, 1) / 1e12
     return R@out
 
+
     
 if __name__ == "__main__":
     from H2O import H2O

@@ -1,5 +1,5 @@
 import numpy as np
-from datetime import datetime
+import log_strings as log
 
 def write_xyz_file(l, fname):
     with open(fname, "w") as f:
@@ -8,7 +8,7 @@ def write_xyz_file(l, fname):
             f.write(f"O     {'      '.join([str(m.O_pos[i]) for i in range(m.dim)])}\n")
             f.write(f"H     {'      '.join([str(m.H1_pos[i]) for i in range(m.dim)])}\n")
             f.write(f"H     {'      '.join([str(m.H2_pos[i]) for i in range(m.dim)])}\n")
-    print(f"File {fname} has been written succesfully")
+    print(log.write_file.format(fname=fname))
 
 def write_trajectory(traj, fname, dim=3):
     with open(fname, "w") as f:
@@ -21,7 +21,11 @@ def write_trajectory(traj, fname, dim=3):
                 f.write(f"H     {'      '.join([str(m[1][i]) for i in range(dim)])}\n")
                 f.write(f"H     {'      '.join([str(m[2][i]) for i in range(dim)])}\n")
             n += 1
-    print(f"File {fname} has been written succesfully")
+    print(log.write_file.format(fname=fname))
+
+def write_state_log(state_log, fname):
+    np.save(fname, state_log)
+    print(log.write_file.format(fname=fname))
 
 if __name__ == "__main__":
     from H2O import H2O

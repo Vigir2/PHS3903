@@ -4,20 +4,18 @@ import parameters.h2O_model as h2O
 import parameters.simulation_parameters as simP
 
 class H2O:
-    def __init__(self, dim, pos = None, vel = None, T = 100):
-        self.dim = dim
-        self.T = T
-        if pos:
-            self.pos = pos
-            pass
+    def __init__(self, dim: int = None, T: int = None, state: np.ndarray = None):
+        if state is not None:
+            self.dim = state.shape[-1]
+            self.O_pos, self.H1_pos, self.H2_pos, self.M_pos = state[0], state[1], state[2], state[3]
+            self.cm_vel, self.rot_vel = state[4], state[5]
+
         else:
+            self.dim = dim
+            self.T = T
             pos = init_func.init_water(dim=self.dim)
             self.O_pos, self.H1_pos, self.H2_pos, self.M_pos = (pos[i] for i in range(len(pos)))
-            self.rand_orientation()
-        if vel:
-            self.vel = vel
-            pass
-        else:
+            self.__rand_orientation()
             self.cm_vel = init_func.random_velocity(h2O.M, T, self.dim)
             self.rot_vel = init_func.random_rot_velocity(self.inertia_tensor(), T, self.dim)
     
@@ -32,7 +30,7 @@ class H2O:
         else:
              return self.O_pos - cm, self.H1_pos - cm, self.H2_pos - cm
 
-    def rand_orientation(self):
+    def __rand_orientation(self):
         cm = self.cm_pos()
         rotation_matrix = init_func.random_euler_angles(self.dim, True)      
         r_pos = self.rpos(M = True)
@@ -67,7 +65,7 @@ class H2O:
     def reset_molecule(self):
         pos = init_func.init_water(dim=self.dim)
         self.O_pos, self.H1_pos, self.H2_pos, self.M_pos = (pos[i] for i in range(len(pos)))
-        self.rand_orientation()
+        self.__rand_orientation()
         self.cm_vel = init_func.random_velocity(h2O.M, self.T, self.dim)
         self.rot_vel = init_func.random_rot_velocity(self.inertia_tensor(), self.T, self.dim)
     
