@@ -1,10 +1,10 @@
 import numpy as np
 
 name = "Test_multi"
-N = 100
+N = 1000
 dim = 3
 
-a = 50 #[Ang]
+a = 40 #[Ang]
 
 b1 = np.array([1, 0, 0])
 b2 = np.array([0, 1, 0])

@@ -1,4 +1,5 @@
 import numpy as np
+import parameters.physical_constants as pc
 
 q = 0.6791 #[e]
 
@@ -10,10 +11,11 @@ theta = np.radians(103.6) #[deg]
 
 sigma = 3.16655 #[Ang]
 
-epsilon = 0.89036 #[Kj/mol]
+epsilon_SI = 0.89036 #[Kj/mol]
+epsilon = epsilon_SI / (pc.Na * pc.u * 10) #[u * ang^2/ps^2]
 
 mO = 15.999 #[u]
 
 mH = 1.00784 #[u]
 
-M = 2*mH + mO
+M = 2*mH + mO #[u]
