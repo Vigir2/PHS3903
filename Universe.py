@@ -11,19 +11,29 @@ import integration as integ
 
 
 class Universe:
-    def __init__(self, name: str, N: int = None, cell: float = None, T: float = 100, P: float = 1, dim: int = 3, input_state: np.ndarray = None):
-        
+    """Univers de simulation"""
+    def __init__(self, name: str = None, N: int = None, a: float = None, T: float = None, dim: int = 3, input_state: np.ndarray = None):
+        """
+        Crée un univers de simulation
+
+        Input
+        -----
+        - name (str): Nom du système
+        - N (int): Nombre de molcules d'eau du système
+        - a (float): Longueur du côté de la cellule de simulation cubique [Å]
+        - T (float): Température d'initialisation du système [K]
+        - dim (int): Dimension du système (2 ou 3)
+        - input_state (np.ndarray ou path): État d'entré du système obtenu à partir d'une simulation précédente
+        """
+        # System name
         if not name or type(name) != str:
             self.name = paths.gen_name() 
         else:
             self.name = name
 
-        self.cell = cell
-        self.dim = dim
-        self.T = T
-        self.P = P
+        self.a = a
         self.trajectories = None
-
+        # If an input state is given
         if input_state != None:
             if type(input_state) == str:
                 input_state = np.load(input_state)
@@ -32,10 +42,12 @@ class Universe:
             self.water_molecules = []
             for i in input_state:
                 self.water_molecules.append(H2O(state = i))
-
+        # If an input state is not given
         else:
+            self.dim = dim
             self.N = N
-            self.water_molecules = [H2O(self.dim, T=T) for i in range(N)]
+            self.T = T
+            self.water_molecules = [H2O(dim=self.dim, T=T) for i in range(N)]
             self.water_molecules[0].rand_position()
             cm = [self.water_molecules[0].cm_pos()]
             for m in self.water_molecules[1:]:
@@ -51,7 +63,6 @@ class Universe:
                         cm.append(m.cm_pos())
                         key = False
                     else:
-                        m.reset_molecule()
                         n += 1
                     if n >= 50:
                         print(log.init_error.format(name = self.name) + log.error_water_placement.format(N = self.N, a = simP.a, security_distance = simP.security_distance))
@@ -60,13 +71,17 @@ class Universe:
         self.thermo, self.baro = 0, 0
         print(log.init_universe.format(name = self.name, N = self.N, T = self.temperature("T", "R")))
 
+    def __getitem__(self, index):
+        return self.water_molecules[index]
+
     def temperature(self, *args):
         K = 0
-        if ("T" in args) ^ ("R" in args):
+        arg = [m.lower() for m in args]
+        if ("t" in arg) ^ ("r" in arg):
             for m in self.water_molecules:
                 K += m.kinetic_energy(args)
             return 2* K / (3 * self.N * pc.kb_SI * 1e-4 / pc.u)
-        if ("T" in args) and ("R" in args):
+        if ("t" in args) and ("r" in args):
             for m in self.water_molecules:
                 K += m.kinetic_energy(args)
             return K / (3 * self.N * pc.kb_SI * 1e-4 / pc.u)
@@ -158,9 +173,10 @@ class Universe:
 
 
 if __name__ == "__main__":
-    U = Universe(N = simP.N, T = simP.T, P = simP.P, cell = simP.a, dim=simP.dim, name=simP.name)
+    #U = Universe(N = simP.N, T = simP.T, P = simP.P, a = simP.a, dim=simP.dim, name=simP.name)
     #U = Universe(name="test_glace", input_state="Output\Test_integration_5000\state_log\Test_integration_5000.npy")
-    U.nvt_integration(dt=0.002, n=300, delta=1)
+    #U.nvt_integration(dt=0.002, n=300, delta=1)
+    U = Universe()
     
 
 

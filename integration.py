@@ -16,7 +16,7 @@ force = [None, "H1_force", "H2_force", "M_force"]
 
 def compute_forces(water_molecules: H2O, rc: float, a: float):
     for k in water_molecules:
-        k.reset_forces()
+        k._H2O__reset_forces()
     psi = 0
     for i in range(4 * len(water_molecules) - 4):
         for j in range(4*(math.floor(i/4) + 1), 4 * len(water_molecules)):
@@ -116,7 +116,7 @@ def npt_verlet_run(U, T0, P0, dt):
         T = U.temperature("T")
         P = U.pression()
         thermo_025 = dt/(4*Q) * (U.dim * U.N * (T - T0) + W * baro0**2 - pc.kb * T0)
-        baro_025 = baro0 + dt/4 * (3 * U.cell**3 / W * (P - P0) - thermo_025 * baro0)
+        baro_025 = baro0 + dt/4 * (3 * U.a**3 / W * (P - P0) - thermo_025 * baro0)
 
     # n+1/2
     Vt_05 = Vn * (1 - dt/2 * (baro_025 + thermo_025))
@@ -127,7 +127,7 @@ def npt_verlet_run(U, T0, P0, dt):
     
     # n + 1
     for i in range(U.N):
-        U.water_molecules[i].update_positions(R_n_1 = R_n_1[i], omega_n_05 = omega_n_05[i], dt = dt)
+        U.water_molecules[i]._H2O__update_positions(R_n_1 = R_n_1[i], omega_n_05 = omega_n_05[i], dt = dt)
     #U.compute_forces()
     print(U.energy())
     print("t = " + str(U.temperature("T", "R")))

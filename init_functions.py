@@ -53,19 +53,45 @@ def random_velocity(T:float, M: float = h2O.M, dim: int = 3):
     ------
     - v (np.array): Vitesse [Å/fs]
     """
-    sigma = np.sqrt(pc.kb_SI*T/(M*pc.u))
+    sigma = np.sqrt(pc.kb*T/M)
     rand_v = np.random.normal(0, sigma, dim)
-    return rand_v/100
+    return rand_v
 
-def random_rot_velocity(I, T, dim = 3):
+def random_rot_velocity(T: float, I: np.ndarray, dim: int = 3):
+    """
+    Retourne une vitesse angulaire aléatoire obtenue d'après une distribution de Maxwell-Boltzmann
+
+    Input
+    -----
+    - T (float): Température cible utilisée pour générer la distribution de Maxwell-Boltzmann [K]
+    - I (np.ndarray): Tenseur d'inertie de la molécule [u*Å^2]
+    - dim (int): Dimension (2 ou 3)
+
+    Output
+    ------
+    - omega (np.array): Vitesse [1/fs]
+    """
     Ip, R = np.linalg.eig(I)
     out = np.zeros(dim)
     for i in range(dim):
-        sigma = np.sqrt(pc.kb_SI*T/(Ip[i] * pc.u * 1e-20))
-        out[i] = np.random.normal(0, sigma, 1) / 1e12
+        sigma = np.sqrt(pc.kb*T/Ip[i])
+        out[i] = np.random.normal(0, sigma, 1)
     return R@out
 
 
     
 if __name__ == "__main__":
-    pass
+    print(np.linalg.norm(random_velocity(300)))
+    import numpy as np
+
+    # Constants
+    k = 1.38e-23  # Boltzmann constant in J/K
+    T = 300       # Temperature in Kelvin
+    m = 18.01528e-3 / 6.022e23  # Mass of a water molecule in kg
+
+    # Calculate root-mean-square speed
+    v_rms = np.sqrt(3 * k * T / m)
+
+    print("Root-mean-square speed of water molecules at 300K:", v_rms * 1e-5, "m/s")
+
+    
