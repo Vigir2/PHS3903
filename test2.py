@@ -1,7 +1,8 @@
 import numpy as np
-y = None
+from scipy.stats import special_ortho_group
 
-if y is not None:
-    print("tes")
-else:
-    print("no")
+# Generate a random rotation matrix
+random_rotation_matrix = special_ortho_group.rvs(3)
+
+print("Random Rotation Matrix:")
+print(random_rotation_matrix)

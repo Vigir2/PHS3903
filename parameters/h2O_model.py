@@ -3,13 +3,13 @@ import parameters.physical_constants as pc
 
 q = 0.6791 #[e]
 
-l = 0.8724 #[Ang]
+l = 0.8724 #[Å]
 
-z = 0.1594 #[Ang]
+z = 0.1594 #[Å]
 
 theta = np.radians(103.6) #[deg]
 
-sigma = 3.16655 #[Ang]
+sigma = 3.16655 #[Å]
 
 epsilon_SI = 0.89036 #[Kj/mol]
 epsilon = epsilon_SI / (pc.Na * pc.u * 10) #[u * ang^2/ps^2]

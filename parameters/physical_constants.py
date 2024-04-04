@@ -1,5 +1,5 @@
 import numpy as np
-kb = 1.380649e-23 #[J/K]
+kb_SI = 1.380649e-23 #[J/K]
 
 u = 1.660539e-27 #[kg]
 
@@ -12,4 +12,7 @@ epsilon0_SI = 8.8541878128e-12 #[F/m]
 epsilon0 = epsilon0_SI * u /(1e6 * e**2) #[e^2 * ps^2 / (u * ang^3)]
 
 k = 1/(4 * np.pi * epsilon0) #[u * ang^3 / (ps^2 * e^2)]
-print(k)
+
+Kt = 0.6 /1e22 #[J / (ps * ang * K)]
+
+kb = kb_SI * 1e-4 / u * kb_SI

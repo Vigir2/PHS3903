@@ -1,11 +1,14 @@
 import numpy as np
 
-name = "Test_multi"
-N = 1000
+name = "Test_pression"
+N = 100
 dim = 3
 
-a = 40 #[Ang]
 
+a = 24 #[Ang]
+rc = 10
+
+# Basis vectors
 b1 = np.array([1, 0, 0])
 b2 = np.array([0, 1, 0])
 b3 = np.array([0, 0, 1])
@@ -17,11 +20,11 @@ C = a*b3
 # Initial conditions
 ##########################################
 
-security_distance = 3 #[Ang]
+security_distance = 4.8 #[Ang]
 
 
 # Thermodynamical properties
 ##########################################
 
-T = 300 #[K]
+T = 200 #[K]
 P = 1   #[bar]
