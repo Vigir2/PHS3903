@@ -76,7 +76,7 @@ class H2O:
         r_pos_rotated = np.array([rotation_matrix@r_pos[i] for i in range(4)])
         self.O_pos, self.H1_pos, self.H2_pos, self.M_pos = cm + r_pos_rotated[0], cm + r_pos_rotated[1], cm + r_pos_rotated[2], cm + r_pos_rotated[3]
 
-    def rand_position(self):
+    def rand_position(self, a: float = simP.a):
         """Déplace la molécule à une position arbitraire dans la cellule de simulation"""
         r = init_func.random_pos(0, simP.a, self.dim)
         self.O_pos, self.H1_pos, self.H2_pos, self.M_pos = self.O_pos + r, self.H1_pos + r, self.H2_pos + r, self.M_pos + r

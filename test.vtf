@@ -1,0 +1,56 @@
+##############################
+# EXAMPLE VTF TRAJECTORY FILE
+##############################
+# STRUCTURE BLOCK
+# define the default atom
+atom default    radius 0.8 name H
+# define atoms 0, 2 and 4; atoms 1 and 3 will be filled with the default
+atom 0,2,4      radius 1.0 name N
+# define atoms 6 to 10
+atom 6:10       radius 0.5 name O
+
+# make a cyclic ring of atoms 0 to 5
+bond 0:5,0::5
+# make a chain of atoms 6 to 10 
+bond 6::10
+
+# TIMESTEP BLOCKS
+# start a new timestep (ordered by default)
+timestep
+# set the unitcell
+pbc 10.0 10.0 10.0
+# now define the coordinates
+4.0 7.0 5.0
+6.0 7.0 5.0
+7.0 5.0 5.0
+6.0 3.0 5.0
+4.0 3.0 5.0
+3.0 5.0 5.0
+5.0 5.0 1.0
+5.0 5.0 3.0
+5.0 5.0 5.0
+5.0 5.0 7.0
+5.0 5.0 9.0
+
+# start another timestep
+timestep
+6.0 7.0 5.0
+7.0 5.0 5.0
+6.0 3.0 5.0
+4.0 3.0 5.0
+3.0 5.0 5.0
+4.0 7.0 5.0
+5.0 5.0 1.5
+5.0 5.0 3.5
+5.0 5.0 5.5
+5.0 5.0 7.5
+5.0 5.0 9.5
+
+# now start an indexed timestep
+timestep indexed
+pbc 11.0 11.0 11.0
+6 5.0 5.0 1.0
+7 5.0 5.0 3.0
+8 5.0 5.0 5.0
+9 5.0 5.0 7.0
+10 5.0 5.0 9.0

@@ -4,7 +4,8 @@ import parameters.simulation_parameters as simP
 import parameters.physical_constants as pc
 
 
-def random_pos(min=float, max=float, dim=int):
+def random_pos(min: float, max: float, dim: int):
+    """Génère un vecteur déplacement aléatoire entre les positions min et max"""
     out = np.random.uniform(min, max, dim)
     return out
     

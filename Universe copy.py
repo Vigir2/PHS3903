@@ -30,9 +30,9 @@ class Universe:
             self.name = paths.gen_name() 
         else:
             self.name = name
-        self.a = a
-        self.thermo, self.baro = 0, 0
 
+        self.a = a
+        self.trajectories = None
         # If an input state is given
         if input_state != None:
             if type(input_state) == str:
@@ -48,22 +48,27 @@ class Universe:
             self.N = N
             self.T = T
             self.water_molecules = [H2O(dim=self.dim, T=T) for i in range(N)]
-            # Gives random positions to molecules in the simulation box ensuring a security distance between each molecule
-            for m in self.water_molecules:
+            self.water_molecules[0].rand_position()
+            cm = [self.water_molecules[0].cm_pos()]
+            for m in self.water_molecules[1:]:
+                key = True
                 n = 0
-                m.rand_position(a = self.a)
-                if hasattr(self, "cm"):
-                    while (np.any([np.linalg.norm(cm - m.cm_pos()) < simP.security_distance for cm in self.cm])):
-                        m.rand_position(a = self.a)
+                while key:
+                    m.rand_position()
+                    err = 0
+                    for i in cm:
+                        if np.linalg.norm((m.cm_pos() - i)) <= 3:
+                            err +=1
+                    if err == 0:
+                        cm.append(m.cm_pos())
+                        key = False
+                    else:
                         n += 1
-                        if n >= 50:
-                            print(log.init_error.format(name = self.name) + log.error_water_placement.format(N = self.N, a = simP.a, security_distance = simP.security_distance))
-                            sys.exit()
-                    self.cm = np.append(self.cm, m.cm_pos().reshape(1,self.dim), axis=0)
-                else:
-                    self.cm = np.array([m.cm_pos()])
-            delattr(self, "cm")
+                    if n >= 50:
+                        print(log.init_error.format(name = self.name) + log.error_water_placement.format(N = self.N, a = simP.a, security_distance = simP.security_distance))
+                        sys.exit()
         self.__remove_net_momentum()
+        self.thermo, self.baro = 0, 0
         print(log.init_universe.format(name = self.name, N = self.N, T = self.temperature("T", "R")))
 
     def __getitem__(self, index):
@@ -88,7 +93,7 @@ class Universe:
             for m in self.water_molecules:
                 K += m.kinetic_energy(args)
             return 2* K / (3 * self.N * pc.kb)
-        if ("t" in arg) and ("r" in arg):
+        if ("t" in args) and ("r" in args):
             for m in self.water_molecules:
                 K += m.kinetic_energy(args)
             return K / (3 * self.N * pc.kb)
@@ -106,40 +111,34 @@ class Universe:
         return pc.u * 1e10 * (1e12)**2 * P
 
     def cm_position(self):
-        """Retourne la position du centre de masse du système en Å"""
-        r = 0
+        s = 0
         for m in self.water_molecules:
-            r += m.cm_pos()
-        return r / self.N
+            s += m.cm_pos()
+        return s / self.N
     
     def system_momentum(self):
-        """Retourne lq quantité de mouvement globale du système en u*Å/fs"""
-        p = 0
+        s = 0
         for m in self.water_molecules:
-            p += h2O.M * m.cm_vel
-        return p
+            s += h2O.M * m.cm_vel
+        return s
     
     def __remove_net_momentum(self):
-        """Ajuste les vitesses des molécules du système pour avoir une quantité de mouvement totale nulle"""
-        sys_cm_vel = self.system_momentum() / (self.N * h2O.M)
+        sys_vel = self.system_momentum() / (self.N * h2O.M)
         for m in self.water_molecules:
-            m.cm_vel -= sys_cm_vel
+            m.cm_vel -= sys_vel
     
-    def snapshot(self):
-        """Enregistre la position actuelle des molécules du système afin d'obtenir une trajectoire"""
-        snap = np.zeros((1, self.N, 3, self.dim))
-        for i in range(self.N):
-            m = self.water_molecules[i]
-            snap[0][i] = np.array([m.O_pos, m.H1_pos, m.H2_pos, m.M_pos])
-        if hasattr(self, "trajectories"):
-            self.trajectories = np.append(self.trajectories, snap, axis=0)
-        else:
-            self.trajectories = snap
+    def snapshot(self, vel = False):
+        if not vel:
+            snap = np.zeros((1, self.N, 4, self.dim))
+            for i in range(self.N):
+                m = self.water_molecules[i]
+                snap[0][i] = np.array([m.O_pos, m.H1_pos, m.H2_pos, m.M_pos])
+            if self.trajectories is None:
+                self.trajectories = snap
+            else:
+                self.trajectories = np.append(self.trajectories, snap, axis=0)
     
     def write_trajectories(self, dt: float, delta: float):
-        """
-        Écrit la trajectoire des molécules du système dans un fichier .xyz
-        """
         out_func.write_trajectory(self.trajectories, fname=paths.traj_fname(name=self.name), dt=dt, delta=delta)
    
     def write_xyz(self):
@@ -162,7 +161,6 @@ class Universe:
         return V
     
     def energy(self):
-        """Retourne l'énergie totale du système en [uÅ^2/fs^2]"""
         K = 0
         for m in self.water_molecules:
             K += m.kinetic_energy("T", "R")
@@ -170,7 +168,6 @@ class Universe:
         return K+V, K, V, 2*K + V
 
     def correct_position(self):
-        """Ajuste la position des molécules pour qu'elles soient dans la cellule de simulation"""
         for m in self.water_molecules:
             m.correct_cm_pos()
     
@@ -191,17 +188,11 @@ if __name__ == "__main__":
     #U = Universe(N = simP.N, T = simP.T, P = simP.P, a = simP.a, dim=simP.dim, name=simP.name)
     #U = Universe(name="test_glace", input_state="Output\Test_integration_5000\state_log\Test_integration_5000.npy")
     #U.nvt_integration(dt=0.002, n=300, delta=1)
-    #U = Universe()
-    U = Universe("testvtf", 10, 10, 300, 3)
-    #b = np.array([[1,2,3],[4,5,6],[7,8,9]])
-    #a = np.array([2,2,2])
-    #print(np.linalg.norm(b[0] - a))
-    #print(b[np.linalg.norm(b - a) < 5])
-    #np.any(np.array([]))
-    #print(np.linalg.norm(b - a) < 1)
-    #print(np.where(np.linalg.norm(b - a) < 5))
-    #print([np.linalg.norm(cm - a) < 5 for cm in b ])
-    #print(np.any([False, False]))
+    U = Universe()
+    print(np.argwhere(np.linalg.norm()))
+    
+
+
 
     """
     for i in range(20):
