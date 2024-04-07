@@ -57,14 +57,14 @@ class Universe:
                         m.rand_position(a = self.a)
                         n += 1
                         if n >= 50:
-                            print(log.init_error.format(name = self.name) + log.error_water_placement.format(N = self.N, a = simP.a, security_distance = simP.security_distance))
+                            print(log.init_error.format(name = self.name) + log.error_water_placement.format(N = self.N, a = self.a, security_distance = simP.security_distance))
                             sys.exit()
                     self.cm = np.append(self.cm, m.cm_pos().reshape(1,self.dim), axis=0)
                 else:
                     self.cm = np.array([m.cm_pos()])
             delattr(self, "cm")
         self.__remove_net_momentum()
-        print(log.init_universe.format(name = self.name, N = self.N, T = self.temperature("T", "R")))
+        #print(log.init_universe.format(name = self.name, N = self.N, T = self.temperature("T", "R"), P = self.pression() / pc.bar_to_uÅfs))
 
     def __getitem__(self, index):
         return self.water_molecules[index]
@@ -93,17 +93,24 @@ class Universe:
                 K += m.kinetic_energy(args)
             return K / (3 * self.N * pc.kb)
     
-    def pression(self):
-        """
-        À revoir
-        """
-        V = 0
-        K = 0
-        for m in self.water_molecules:
-            V += np.dot(m.cm_pos(), m.cm_force())
-            K += m.kinetic_energy("T")
-        P = 1/(3*simP.a**2) * (2 * K + V)
-        return pc.u * 1e10 * (1e12)**2 * P
+    def pression(self, K: float = None):
+        """Calcule la pression du système en """
+        if not hasattr(self, "virrial"):
+            self.compute_forces()
+        if K != None:
+            v = self.virial
+            for m in self.water_molecules:
+                v -= m.virrial_correction()
+            P = 1/(3*self.a**3) * (2 * K + v)
+            return P
+        else:
+            K = 0
+            v = self.virial
+            for m in self.water_molecules:
+                K += m.kinetic_energy("T")
+                v -= m.virrial_correction()
+            P = 1/(3*self.a**3) * (2 * K + v)
+            return P
 
     def cm_position(self):
         """Retourne la position du centre de masse du système en Å"""
@@ -130,7 +137,7 @@ class Universe:
         snap = np.zeros((1, self.N, 3, self.dim))
         for i in range(self.N):
             m = self.water_molecules[i]
-            snap[0][i] = np.array([m.O_pos, m.H1_pos, m.H2_pos, m.M_pos])
+            snap[0][i] = np.array([m.O_pos, m.H1_pos, m.H2_pos])
         if hasattr(self, "trajectories"):
             self.trajectories = np.append(self.trajectories, snap, axis=0)
         else:
@@ -158,21 +165,23 @@ class Universe:
         out_func.write_state_log(out, paths.state_log_fname(self.name))
 
     def compute_forces(self):
-        V = integ.compute_forces(self.water_molecules, rc=simP.rc, a=simP.a)
-        return V
+        """Calcule les forces du système, l'énergie potentielle et le virriel"""
+        integ.compute_forces(U=self, rc=simP.rc, a=self.a)
     
     def energy(self):
         """Retourne l'énergie totale du système en [uÅ^2/fs^2]"""
         K = 0
         for m in self.water_molecules:
             K += m.kinetic_energy("T", "R")
-        V = self.compute_forces()
-        return K+V, K, V, 2*K + V
+        if not hasattr(self, "potential_energy"):
+            self.compute_forces()
+        V = self.potential_energy
+        return K+V, K, V
 
     def correct_position(self):
         """Ajuste la position des molécules pour qu'elles soient dans la cellule de simulation"""
         for m in self.water_molecules:
-            m.correct_cm_pos()
+            m.correct_cm_pos(a = self.a)
     
     def nve_integration(self, dt: float, n: int, delta: int):
         self.compute_forces()
@@ -185,29 +194,31 @@ class Universe:
         U.write_trajectories(dt=dt, delta=delta)
         U.save_state_log()
         U.write_xyz()
-
+    
+    def npt_integration(self, dt: float, n: int, delta: int, T0: float, P0: float):
+        P0 *= pc.bar_to_uÅfs
+        self.compute_forces()
+        for i in range(n):
+            print(i)
+            print(f"a = {self.a}")
+            if i%delta == 0:
+                U.snapshot()
+            integ.npt_verlet_run(U=self, dt=dt, T0=T0, P0=P0)
+            U.correct_position()
+            print("T = ", U.temperature("T"), U.temperature("T", "r"))
+            print("P = ", U.pression() / pc.bar_to_uÅfs)
+        U.write_trajectories(dt=dt, delta=delta)
+        U.save_state_log()
+        U.write_xyz()
 
 if __name__ == "__main__":
     #U = Universe(N = simP.N, T = simP.T, P = simP.P, a = simP.a, dim=simP.dim, name=simP.name)
     #U = Universe(name="test_glace", input_state="Output\Test_integration_5000\state_log\Test_integration_5000.npy")
     #U.nvt_integration(dt=0.002, n=300, delta=1)
     #U = Universe()
-    U = Universe("testvtf", 10, 10, 300, 3)
-    #b = np.array([[1,2,3],[4,5,6],[7,8,9]])
-    #a = np.array([2,2,2])
-    #print(np.linalg.norm(b[0] - a))
-    #print(b[np.linalg.norm(b - a) < 5])
-    #np.any(np.array([]))
-    #print(np.linalg.norm(b - a) < 1)
-    #print(np.where(np.linalg.norm(b - a) < 5))
-    #print([np.linalg.norm(cm - a) < 5 for cm in b ])
-    #print(np.any([False, False]))
+    U = Universe("testvtf", a=simP.a, N=simP.N, T=simP.T, dim=3)
+    #print(U.pression())
+    U.npt_integration(1, 500, 1, 100, 100)
+    
 
-    """
-    for i in range(20):
-        for j in U.water_molecules:
-            j.rand_orientation()
-        U.snapshot()
-    U.write_trajectories()
-    """
 

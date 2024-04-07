@@ -65,7 +65,7 @@ class Universe:
                     else:
                         n += 1
                     if n >= 50:
-                        print(log.init_error.format(name = self.name) + log.error_water_placement.format(N = self.N, a = simP.a, security_distance = simP.security_distance))
+                        print(log.init_error.format(name = self.name) + log.error_water_placement.format(N = self.N, a = self.a, security_distance = simP.security_distance))
                         sys.exit()
         self.__remove_net_momentum()
         self.thermo, self.baro = 0, 0
@@ -157,7 +157,7 @@ class Universe:
         out_func.write_state_log(out, paths.state_log_fname(self.name))
 
     def compute_forces(self):
-        V = integ.compute_forces(self.water_molecules, rc=simP.rc, a=simP.a)
+        V = integ.compute_forces(self.water_molecules, rc=simP.rc, a=self.a)
         return V
     
     def energy(self):

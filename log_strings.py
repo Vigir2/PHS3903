@@ -1,5 +1,5 @@
 
-init_universe = "System \"{name}\" has been initialized succesfully with {N} water molecules at {T:.2f} K."
+init_universe = "System \"{name}\" has been initialized succesfully with {N} water molecules at {T:.2f} K and {P:.2f} bar."
 
 init_error = "An error has occured while initiating system \"{name}\":\n"
 

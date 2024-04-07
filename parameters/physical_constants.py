@@ -14,15 +14,16 @@ joules_to_uÅfs = 1e-10 / u # Converts J to u * Å^2 / fs^2
 
 newtons_to_uÅfs = 1e-20 / u # Converts N to u * Å / fs^2
 
+uÅfs_to_Pa = u * 1e40
 
+bar_to_uÅfs = 1 / (u * 1e37)
 
+epsilon0 = epsilon0_SI /(e**2 * newtons_to_uÅfs * 1e20) #[e^2 * fs^2 / (u * ang^3)]
 
-epsilon0 = epsilon0_SI * u /(1e6 * e**2) #[e^2 * ps^2 / (u * ang^3)]
-
-k = 1/(4 * np.pi * epsilon0) #[u * ang^3 / (ps^2 * e^2)]
+k = 1/(4 * np.pi * epsilon0) #[u * ang^3 / (fs^2 * e^2)]
 
 Kt = 0.6 /1e22 #[J / (ps * ang * K)]
 
 kb = kb_SI * joules_to_uÅfs #[u * Å^2 / fs^2 / K]
 
-print(newtons_to_uÅfs)
+print(bar_to_uÅfs)

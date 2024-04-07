@@ -5,8 +5,8 @@ N = 100
 dim = 3
 
 
-a = 24 #[Ang]
-rc = 10
+a = 40 #[Ang]
+rc = 15
 
 # Basis vectors
 b1 = np.array([1, 0, 0])
@@ -20,11 +20,14 @@ C = a*b3
 # Initial conditions
 ##########################################
 
-security_distance = 4.8 #[Ang]
+security_distance = 5 #[Ang]
 
 
 # Thermodynamical properties
 ##########################################
 
-T = 200 #[K]
+T = 50 #[K]
 P = 1   #[bar]
+
+tau_p = 500
+tau_t = 250

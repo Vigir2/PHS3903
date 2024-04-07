@@ -67,6 +67,11 @@ class H2O:
             return self.O_pos - cm, self.H1_pos - cm, self.H2_pos - cm, self.M_pos - cm
         else:
              return self.O_pos - cm, self.H1_pos - cm, self.H2_pos - cm
+    
+    def virrial_correction(self):
+        rpos = self.rpos(M=True)
+        s = np.dot(self.O_force, rpos[0]) + np.dot(self.H1_force, rpos[1]) + np.dot(self.H2_force, rpos[2]) + np.dot(self.M_force, rpos[3])
+        return s
 
     def __rand_orientation(self):
         """Applique une rotation aléatoire sur la molécule"""
@@ -78,9 +83,9 @@ class H2O:
 
     def rand_position(self, a: float = simP.a):
         """Déplace la molécule à une position arbitraire dans la cellule de simulation"""
-        r = init_func.random_pos(0, simP.a, self.dim)
+        r = init_func.random_pos(0, a, self.dim)
         self.O_pos, self.H1_pos, self.H2_pos, self.M_pos = self.O_pos + r, self.H1_pos + r, self.H2_pos + r, self.M_pos + r
-        self.correct_cm_pos()
+        self.correct_cm_pos(a=a)
 
     def inertia_tensor(self):
         """Retourne le tenseur d'inertie de la molécule"""
@@ -132,13 +137,13 @@ class H2O:
             K += Kr
         return K
 
-    def correct_cm_pos(self):
+    def correct_cm_pos(self, a: float = simP.a):
         """Ajuste la position de la molécule pour qu'elle reste dans la cellule de simulation"""
         cm = self.cm_pos()
-        self.O_pos -= np.floor(cm/simP.a) * simP.a
-        self.H1_pos -= np.floor(cm/simP.a) * simP.a
-        self.H2_pos -= np.floor(cm/simP.a) * simP.a
-        self.M_pos -= np.floor(cm/simP.a) * simP.a
+        self.O_pos -= np.floor(cm/a) * a
+        self.H1_pos -= np.floor(cm/a) * a
+        self.H2_pos -= np.floor(cm/a) * a
+        self.M_pos -= np.floor(cm/a) * a
 
     def cm_force(self):
         """Retourne la force totale exercée sur le centre de masse de le molécule en [u * Å / fs^2]"""
