@@ -1,11 +1,11 @@
 import numpy as np
 
-name = "Test_pression"
-N = 100
+name = "Server"
+N = 150
 dim = 3
 
 
-a = 40 #[Ang]
+a = 35 #[Ang]
 rc = 15
 
 # Basis vectors
@@ -20,13 +20,13 @@ C = a*b3
 # Initial conditions
 ##########################################
 
-security_distance = 5 #[Ang]
+security_distance = 4.5 #[Ang]
 
 
 # Thermodynamical properties
 ##########################################
 
-T = 50 #[K]
+T = 150 #[K]
 P = 1   #[bar]
 
 tau_p = 500

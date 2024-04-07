@@ -212,13 +212,13 @@ class Universe:
         U.write_xyz()
 
 if __name__ == "__main__":
-    #U = Universe(N = simP.N, T = simP.T, P = simP.P, a = simP.a, dim=simP.dim, name=simP.name)
+    U = Universe(N = simP.N, T = simP.T, P = simP.P, a = simP.a, dim=simP.dim, name=simP.name)
     #U = Universe(name="test_glace", input_state="Output\Test_integration_5000\state_log\Test_integration_5000.npy")
-    #U.nvt_integration(dt=0.002, n=300, delta=1)
+    U.nve_integration(dt=2, n=1e4, delta=2)
     #U = Universe()
-    U = Universe("testvtf", a=simP.a, N=simP.N, T=simP.T, dim=3)
+    #U = Universe("testvtf", a=simP.a, N=simP.N, T=simP.T, dim=3)
     #print(U.pression())
-    U.npt_integration(1, 500, 1, 100, 100)
+    #U.npt_integration(1, 500, 1, 100, 100)
     
 
 
