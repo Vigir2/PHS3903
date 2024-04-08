@@ -53,7 +53,7 @@ class Universe:
                 n = 0
                 m.rand_position(a = self.a)
                 if hasattr(self, "cm"):
-                    while (np.any([np.linalg.norm(cm - m.cm_pos()) < simP.security_distance for cm in self.cm])):
+                    while (np.any([np.linalg.norm(integ.minimum_image(cm - m.cm_pos(), a = self.a)) < simP.security_distance for cm in self.cm])):
                         m.rand_position(a = self.a)
                         n += 1
                         if n >= 50:
@@ -64,6 +64,7 @@ class Universe:
                     self.cm = np.array([m.cm_pos()])
             delattr(self, "cm")
         self.__remove_net_momentum()
+        self.compute_forces()
         #print(log.init_universe.format(name = self.name, N = self.N, T = self.temperature("T", "R"), P = self.pression() / pc.bar_to_uÅfs))
 
     def __getitem__(self, index):
@@ -87,20 +88,18 @@ class Universe:
         if ("t" in arg) ^ ("r" in arg):
             for m in self.water_molecules:
                 K += m.kinetic_energy(args)
-            return 2* K / (3 * self.N * pc.kb)
+            return 2 * K / (3 * self.N * pc.kb)
         if ("t" in arg) and ("r" in arg):
             for m in self.water_molecules:
                 K += m.kinetic_energy(args)
             return K / (3 * self.N * pc.kb)
     
     def pression(self, K: float = None):
-        """Calcule la pression du système en """
-        if not hasattr(self, "virrial"):
-            self.compute_forces()
+        """Calcule la pression du système en u / (Å * fs^2)"""
         if K != None:
             v = self.virial
             for m in self.water_molecules:
-                v -= m.virrial_correction()
+                v -= m.virial_correction()
             P = 1/(3*self.a**3) * (2 * K + v)
             return P
         else:
@@ -108,7 +107,7 @@ class Universe:
             v = self.virial
             for m in self.water_molecules:
                 K += m.kinetic_energy("T")
-                v -= m.virrial_correction()
+                v -= m.virial_correction()
             P = 1/(3*self.a**3) * (2 * K + v)
             return P
 
@@ -173,8 +172,6 @@ class Universe:
         K = 0
         for m in self.water_molecules:
             K += m.kinetic_energy("T", "R")
-        if not hasattr(self, "potential_energy"):
-            self.compute_forces()
         V = self.potential_energy
         return K+V, K, V
 
@@ -198,7 +195,7 @@ class Universe:
     def npt_integration(self, dt: float, n: int, delta: int, T0: float, P0: float):
         P0 *= pc.bar_to_uÅfs
         self.compute_forces()
-        for i in range(n):
+        for i in range(int(n)):
             print(i)
             print(f"a = {self.a}")
             if i%delta == 0:
@@ -212,13 +209,13 @@ class Universe:
         U.write_xyz()
 
 if __name__ == "__main__":
-    U = Universe(N = simP.N, T = simP.T, P = simP.P, a = simP.a, dim=simP.dim, name=simP.name)
+    U = Universe(name = simP.name, N = simP.N, T = simP.T, a = simP.a, dim=simP.dim)
     #U = Universe(name="test_glace", input_state="Output\Test_integration_5000\state_log\Test_integration_5000.npy")
-    U.nve_integration(dt=2, n=1e4, delta=2)
+    #U.nve_integration(dt=1, n=150, delta=1)
     #U = Universe()
     #U = Universe("testvtf", a=simP.a, N=simP.N, T=simP.T, dim=3)
     #print(U.pression())
-    #U.npt_integration(1, 500, 1, 100, 100)
+    U.npt_integration(dt = 2, n = 2000, delta = 1, T0 = 100, P0 = 100)
     
 
 

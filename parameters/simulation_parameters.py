@@ -1,12 +1,12 @@
 import numpy as np
 
-name = "Server"
-N = 150
+name = "test_npt"
+N = 125
 dim = 3
 
 
 a = 35 #[Ang]
-rc = 15
+rc = 12
 
 # Basis vectors
 b1 = np.array([1, 0, 0])
@@ -26,8 +26,8 @@ security_distance = 4.5 #[Ang]
 # Thermodynamical properties
 ##########################################
 
-T = 150 #[K]
-P = 1   #[bar]
+T = 100 #[K]
+P = 10   #[bar]
 
-tau_p = 500
-tau_t = 250
+tau_p = 700
+tau_t = 700

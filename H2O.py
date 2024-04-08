@@ -68,7 +68,8 @@ class H2O:
         else:
              return self.O_pos - cm, self.H1_pos - cm, self.H2_pos - cm
     
-    def virrial_correction(self):
+    def virial_correction(self):
+        """Retourne la correction au Viriel de la molécule pour prendre en compte la rigidité de la molécule"""
         rpos = self.rpos(M=True)
         s = np.dot(self.O_force, rpos[0]) + np.dot(self.H1_force, rpos[1]) + np.dot(self.H2_force, rpos[2]) + np.dot(self.M_force, rpos[3])
         return s
@@ -129,12 +130,10 @@ class H2O:
         """
         K = 0
         if ("t" in args[0]) or ("T" in args[0]):
-            Kt = 1/2 * h2O.M * np.linalg.norm(self.cm_vel)**2
-            K += Kt
+            K += 1/2 * h2O.M * np.linalg.norm(self.cm_vel)**2
         if ("r" in args[0]) or ("R" in args[0]):
             J = self.inertia_tensor()@self.rot_vel
-            Kr = 1/2 * np.dot(self.rot_vel, J)
-            K += Kr
+            K += 1/2 * np.dot(self.rot_vel, J)
         return K
 
     def correct_cm_pos(self, a: float = simP.a):
