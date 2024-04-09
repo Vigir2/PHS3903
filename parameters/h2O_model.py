@@ -12,7 +12,7 @@ theta = np.radians(103.6) #[deg]
 sigma = 3.16655 #[Å]
 
 epsilon_SI = 0.89036 #[Kj/mol]
-epsilon = epsilon_SI * 1000 / (pc.Na) * pc.joules_to_uÅfs #[u * ang^2/fs^2]
+epsilon = epsilon_SI * 1000 / (pc.Na) * pc.joules_to_uÅfs #[u * Å^2/fs^2]
 
 mO = 15.999 #[u]
 

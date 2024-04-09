@@ -65,7 +65,7 @@ class Universe:
             delattr(self, "cm")
         self.__remove_net_momentum()
         self.compute_forces()
-        #print(log.init_universe.format(name = self.name, N = self.N, T = self.temperature("T", "R"), P = self.pression() / pc.bar_to_uÅfs))
+        print(log.init_universe.format(name = self.name, N = self.N, T = self.temperature("T", "R"), P = self.pression() / pc.bar_to_uÅfs))
 
     def __getitem__(self, index):
         return self.water_molecules[index]
@@ -203,7 +203,7 @@ class Universe:
             integ.npt_verlet_run(U=self, dt=dt, T0=T0, P0=P0)
             U.correct_position()
             print("T = ", U.temperature("T"), U.temperature("T", "r"))
-            print("P = ", U.pression() / pc.bar_to_uÅfs)
+            print("P = ", U.pression() * pc.uÅfs_to_bar)
         U.write_trajectories(dt=dt, delta=delta)
         U.save_state_log()
         U.write_xyz()

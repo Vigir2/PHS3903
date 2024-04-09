@@ -9,6 +9,7 @@ import init_functions as init
 
 import numpy as np
 def minimum_image(r, a: float):
+    """Retourne la distance associée à l'image la plus proche entre deux atomes d'après les conditions frontières périodiques"""
     return r - a * np.rint(r/a)
 
 def tkinetic_energy(V: np.ndarray):
@@ -22,14 +23,23 @@ name = [None, "H1_pos", "H2_pos", "M_pos"]
 force = [None, "H1_force", "H2_force", "M_force"]
 
 def compute_forces(U: Universe, rc: float, a: float):
-    for i in range(U.N):
-        U.water_molecules[i]._H2O__reset_forces()
+    """
+    Calcule les forces du systèmes U, l'énergie potentielle et le Viriel
+
+    Input
+    -----
+    - U (Universe): Univers de simulation
+    - rc (float): Rayon de coupure utilisé pour le calcul des forces
+    - a (float): Paramètre de maille de la cellule de simulation
+    """
+    for m in U:
+        m._H2O__reset_forces()
     virial = 0
     psi = 0
     for i in range(4 * U.N - 4):
         for j in range(4*(math.floor(i/4) + 1), 4 * U.N):
             if (i%4 == 0) and (j%4 == 0):
-                # L-J forces
+                # L-J forces between O atoms
                 R = minimum_image(U[math.floor(j/4)][0] - U[math.floor(i/4)][0], a=a)
                 r = np.linalg.norm(R)
                 if r < rc:
@@ -43,12 +53,12 @@ def compute_forces(U: Universe, rc: float, a: float):
                 # Non-interracting atoms
                 pass
             else:
-                # Electrostatic forces
+                # Electrostatic forces for H and M
                 R = minimum_image(U[math.floor(j/4)][j%4] - U[math.floor(i/4)][i%4], a=a)
                 r = np.linalg.norm(R)
                 if r < rc:
                     psi += f.coulomb(r=r, rc=rc, q1=q[i%4], q2=q[j%4], shifted=True)
-                    fij = f.coulomb_force(r=r, q1=q[i%4], q2=q[j%4]) * R/r
+                    fij = f.coulomb_force(r=r, q1=q[i%4], q2=q[j%4]) * R/r # Force on j due to i
                     setattr(U[math.floor(j/4)], force[j%4], getattr(U[math.floor(j/4)], force[j%4]) + fij) 
                     setattr(U[math.floor(i/4)], force[i%4], getattr(U[math.floor(i/4)], force[i%4]) - fij)
                     virial += np.dot(fij, R)

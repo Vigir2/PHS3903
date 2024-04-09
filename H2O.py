@@ -130,7 +130,7 @@ class H2O:
         """
         K = 0
         if ("t" in args[0]) or ("T" in args[0]):
-            K += 1/2 * h2O.M * np.linalg.norm(self.cm_vel)**2
+            K += 1/2 * h2O.M * np.dot(self.cm_vel, self.cm_vel)
         if ("r" in args[0]) or ("R" in args[0]):
             J = self.inertia_tensor()@self.rot_vel
             K += 1/2 * np.dot(self.rot_vel, J)
