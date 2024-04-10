@@ -82,7 +82,7 @@ class H2O:
         r_pos_rotated = np.array([rotation_matrix@r_pos[i] for i in range(4)])
         self.O_pos, self.H1_pos, self.H2_pos, self.M_pos = cm + r_pos_rotated[0], cm + r_pos_rotated[1], cm + r_pos_rotated[2], cm + r_pos_rotated[3]
 
-    def rand_position(self, a: float = simP.a):
+    def rand_position(self, a: float):
         """Déplace la molécule à une position arbitraire dans la cellule de simulation"""
         r = init_func.random_pos(0, a, self.dim)
         self.O_pos, self.H1_pos, self.H2_pos, self.M_pos = self.O_pos + r, self.H1_pos + r, self.H2_pos + r, self.M_pos + r
@@ -136,7 +136,7 @@ class H2O:
             K += 1/2 * np.dot(self.rot_vel, J)
         return K
 
-    def correct_cm_pos(self, a: float = simP.a):
+    def correct_cm_pos(self, a: float):
         """Ajuste la position de la molécule pour qu'elle reste dans la cellule de simulation"""
         cm = self.cm_pos()
         self.O_pos -= np.floor(cm/a) * a
@@ -175,7 +175,8 @@ class H2O:
             d_dot = np.cross(omega_n_05, rpos[i])
             phi = dt * np.linalg.norm(d_dot) / np.linalg.norm(bi)
             if np.degrees(phi) < 1:
-                sinc = 1 - (phi**2)/6*(1-(phi**2)/20 * (1 - (phi**2)/42))
+                # Taylor expansion to avoid division by 0
+                sinc = 1 - (phi**2)/6*(1-(phi**2)/20 * (1 - (phi**2)/42)) #O(phi8)
                 bi_ = bi * np.cos(phi) + dt * d_dot * sinc
             else:
                 bi_ = bi * np.cos(phi) + dt * d_dot * np.sin(phi)/phi

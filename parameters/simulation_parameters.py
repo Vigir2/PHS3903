@@ -1,12 +1,12 @@
 import numpy as np
 
-name = "test_npt"
-N = 125
+name = "test_nve"
+N = 50
 dim = 3
 
 
 a = 35 #[Ang]
-rc = 12
+rc = 15
 
 # Basis vectors
 b1 = np.array([1, 0, 0])
@@ -26,7 +26,7 @@ security_distance = 4.5 #[Ang]
 # Thermodynamical properties
 ##########################################
 
-T = 100 #[K]
+T = 300 #[K]
 P = 10   #[bar]
 
 tau_p = 700

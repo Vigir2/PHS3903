@@ -3,6 +3,7 @@ from datetime import datetime
 import numpy as np
 
 output = "Output"
+state_var = {"E": "Energy", "P": "Pressure", "T": "Temperature", "H": "Enthalpie", "t": 'Time'}
 
 def traj_fname(name):
     date = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
@@ -22,6 +23,13 @@ def state_log_fname(name):
     fname = os.path.join(output, name, "state_log", name + ".npy")
     if not os.path.exists(os.path.join(output, name, "state_log")):
         os.makedirs(os.path.join(output, name, "state_log"))
+    return fname
+
+def state_variables_fname(name: str, var: str):
+    date = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    fname = os.path.join(output, name, "State_variables", name + "_" + state_var[var] + "_" + date + ".npy")
+    if not os.path.exists(os.path.join(output, name, "State_variables")):
+        os.makedirs(os.path.join(output, name, "State_variables"))
     return fname
 
 def gen_name():

@@ -66,7 +66,8 @@ def compute_forces(U: Universe, rc: float, a: float):
     setattr(U, "potential_energy", psi)
     return
 
-def nve_verlet_run(U, dt):
+def nve_verlet_run(U: Universe, dt: float):
+    """Effectue une itération de verlet vitesse en ensemble NVE"""
     Fn = np.zeros((U.N, U.dim))
     Tn = np.zeros((U.N, U.dim))
     Vn = np.zeros((U.N, U.dim))
@@ -77,35 +78,34 @@ def nve_verlet_run(U, dt):
 
     # n
     for i in range(U.N):
-        Fn[i] = U.water_molecules[i].cm_force()
-        Tn[i] = U.water_molecules[i].torque()
-        Vn[i] = U.water_molecules[i].cm_vel
-        Jn[i] = U.water_molecules[i].ang_momentum()
-        Rn[i] = U.water_molecules[i].cm_pos()
-        omegan[i] = U.water_molecules[i].rot_vel
-        omega_dot[i] = U.water_molecules[i].omega_dot()
+        Fn[i] = U[i].cm_force()
+        Tn[i] = U[i].torque()
+        Vn[i] = U[i].cm_vel
+        Jn[i] = U[i].ang_momentum()
+        Rn[i] = U[i].cm_pos()
+        omegan[i] = U[i].rot_vel
+        omega_dot[i] = U[i].omega_dot()
 
     # n+1/2
-    V_n_05 = Vn + Fn * dt/(2*h2O.M)
-    J_n_05 = Jn + Tn * dt/2
-    R_n_1 = Rn + V_n_05 * dt
-    omega_n_05 = omegan + omega_dot * dt/2
+    V_n_05 = Vn + Fn * dt/(2*h2O.M) #O(Δt3)
+    J_n_05 = Jn + Tn * dt/2 #O(Δt3)
+    R_n_1 = Rn + V_n_05 * dt #O(Δt4)
+    omega_n_05 = omegan + omega_dot * dt/2 #O(Δt3)
     
     # n + 1
     for i in range(U.N):
         U.water_molecules[i]._H2O__update_positions(R_n_1 = R_n_1[i], omega_n_05 = omega_n_05[i], dt = dt)
     U.compute_forces()
-    print(U.energy())
-    Fn_1 = np.zeros((U.N, U.dim))
-    Tn_1 = np.zeros((U.N, U.dim))
+    F_n_1 = np.zeros((U.N, U.dim))
+    T_n_1 = np.zeros((U.N, U.dim))
     for i in range(U.N):
-        Fn_1[i] = U.water_molecules[i].cm_force()
-        Tn_1[i] = U.water_molecules[i].torque()
-    V_n_1 = V_n_05 + Fn_1 * dt / (2*h2O.M)
-    J_n_1 = J_n_05 + Tn_1 * dt/2
+        F_n_1[i] = U[i].cm_force()
+        T_n_1[i] = U[i].torque()
+    V_n_1 = V_n_05 + F_n_1 * dt / (2*h2O.M) #O(Δt2)
+    J_n_1 = J_n_05 + T_n_1 * dt/2 #O(Δt2)
     for i in range(U.N):
-        U.water_molecules[i].cm_vel = V_n_1[i]
-        U.water_molecules[i].rot_vel = np.linalg.inv(U.water_molecules[i].inertia_tensor())@J_n_1[i]
+        U[i].cm_vel = V_n_1[i]
+        U[i].rot_vel = np.linalg.inv(U[i].inertia_tensor())@J_n_1[i]
 
 def npt_verlet_run(U: Universe, T0, P0, dt):
     Q = U.dim * U.N * pc.kb * simP.tau_t**2
@@ -178,6 +178,8 @@ def npt_verlet_run(U: Universe, T0, P0, dt):
     thermo_1 = thermo_075 + dt/(4*Q) * (U.dim * U.N * (T_n_1 - T0) * pc.kb + W * baro_1**2 - pc.kb * T0)
     U.baro = baro_1
     U.thermo = thermo_1
+    U.pressure = P_n_1
+    U.tkinetic_energy = K
 
 def andersen(water_molecules, T, a, dt):
     p = pc.Kt * a * dt / (pc.kb_SI * len(water_molecules))

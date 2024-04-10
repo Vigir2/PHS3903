@@ -7,4 +7,8 @@ error_water_placement = "Could not place {N} water molecules in a {a} x {a} x {a
 
 write_file = "File {fname} has been written succesfully!"
 
-invalid_input = "{input} input is invalid. {input} must be a {type}"
+write_state_variables = "System state variables for {var} have been written in {loc} sucesfully!"
+
+invalid_input = "{input} input is invalid. {input} must be a {type}."
+
+nve_initiation = "NVE velocity Verlet scheme initiated for {time} ps with {n} iterations."

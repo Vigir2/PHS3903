@@ -65,7 +65,7 @@ class Universe:
             delattr(self, "cm")
         self.__remove_net_momentum()
         self.compute_forces()
-        print(log.init_universe.format(name = self.name, N = self.N, T = self.temperature("T", "R"), P = self.pression() / pc.bar_to_uÅfs))
+        print(log.init_universe.format(name = self.name, N = self.N, T = self.temperature("T", "R"), P = self.pression() * pc.uÅfs_to_bar), end="\n\n")
 
     def __getitem__(self, index):
         return self.water_molecules[index]
@@ -92,7 +92,8 @@ class Universe:
         if ("t" in arg) and ("r" in arg):
             for m in self.water_molecules:
                 K += m.kinetic_energy(args)
-            return K / (3 * self.N * pc.kb)
+                T = K / (3 * self.N * pc.kb)
+            return T
     
     def pression(self, K: float = None):
         """Calcule la pression du système en u / (Å * fs^2)"""
@@ -142,19 +143,19 @@ class Universe:
         else:
             self.trajectories = snap
     
-    def write_trajectories(self, dt: float, delta: float):
+    def __write_trajectories(self, dt: float, delta: float):
         """
         Écrit la trajectoire des molécules du système dans un fichier .xyz
         """
         out_func.write_trajectory(self.trajectories, fname=paths.traj_fname(name=self.name), dt=dt, delta=delta)
    
-    def write_xyz(self):
+    def __write_xyz(self):
         out_func.write_xyz_file(self.water_molecules, fname=paths.config_fname(name=self.name))
 
-    def save_state_log(self):
+    def __save_state_log(self):
         out = np.zeros((self.N, 6, self.dim))
         for i in range(self.N):
-            self.water_molecules[i].correct_cm_pos()
+            self.water_molecules[i].correct_cm_pos(a = self.a)
             out[i][0] = self.water_molecules[i].O_pos
             out[i][1] = self.water_molecules[i].H1_pos
             out[i][2] = self.water_molecules[i].H2_pos
@@ -162,6 +163,10 @@ class Universe:
             out[i][4] = self.water_molecules[i].cm_vel
             out[i][5] = self.water_molecules[i].rot_vel
         out_func.write_state_log(out, paths.state_log_fname(self.name))
+
+    def __save_state_variables(self, data: dict):
+        """Enregistre les variables d'états du système en fonction du temps"""
+        out_func.write_state_variables(data=data, name=self.name)
 
     def compute_forces(self):
         """Calcule les forces du système, l'énergie potentielle et le virriel"""
@@ -173,6 +178,7 @@ class Universe:
         for m in self.water_molecules:
             K += m.kinetic_energy("T", "R")
         V = self.potential_energy
+        self.total_energy = K+V, K, V
         return K+V, K, V
 
     def correct_position(self):
@@ -180,17 +186,47 @@ class Universe:
         for m in self.water_molecules:
             m.correct_cm_pos(a = self.a)
     
-    def nve_integration(self, dt: float, n: int, delta: int):
-        self.compute_forces()
+    def nve_integration(self, dt: float, n: int, delta: int = 1, *args):
+        """
+        Effectue une intégration des équation du mouvement pour un ensemble NVE avec un algorithme de Verlet vitesse
+
+        Input
+        -----
+        - dt (float): Pas de temps utilisé pour l'intégration [fs]
+        - n (int): Nombre de pas
+        - delta (int): Intervalle de pas de temps auquel les cordonnées sont enregistrées
+        - E, T, P (str): Quantités à mesurées pendant l'intégration
+        """
+        print(log.nve_initiation.format(time=(dt*n/1000), n=n), end="\n\n")
+        data = dict()
+        E, T, P = False, False, False
+        if "E" in args:
+            E = True
+            data["E"] = []
+        if "T" in args:
+            T = True
+            data["T"] = []
+        if "P" in args:
+            P = True
+            data["P"] = []
         for i in range(n):
-            print(i)
+            print(f"n = {i}")
+            print(self.energy(), end="\n\n")
             if i%delta == 0:
                 U.snapshot()
+                if E:
+                    data["E"].append(self.total_energy)
+                if T:
+                    data["T"].append(self.temperature("T", "R"))
+                if P:
+                    data["P"].append(self.pression())
             integ.nve_verlet_run(U=self, dt=dt)
-            U.correct_position()
-        U.write_trajectories(dt=dt, delta=delta)
-        U.save_state_log()
-        U.write_xyz()
+            self.correct_position()
+        data['t'] = np.arange(0, n*dt, delta)
+        self.__write_trajectories(dt=dt, delta=delta)
+        self.__save_state_variables(data=data)
+        self.__save_state_log()
+        self.__write_xyz()
     
     def npt_integration(self, dt: float, n: int, delta: int, T0: float, P0: float):
         P0 *= pc.bar_to_uÅfs
@@ -206,7 +242,8 @@ class Universe:
             print("P = ", U.pression() * pc.uÅfs_to_bar)
         U.write_trajectories(dt=dt, delta=delta)
         U.save_state_log()
-        U.write_xyz()
+
+        #U.write_xyz()
 
 if __name__ == "__main__":
     U = Universe(name = simP.name, N = simP.N, T = simP.T, a = simP.a, dim=simP.dim)
@@ -215,7 +252,8 @@ if __name__ == "__main__":
     #U = Universe()
     #U = Universe("testvtf", a=simP.a, N=simP.N, T=simP.T, dim=3)
     #print(U.pression())
-    U.npt_integration(dt = 2, n = 2000, delta = 1, T0 = 100, P0 = 100)
+    #U.npt_integration(dt = 2, n = 10, delta = 1, T0 = 100, P0 = 100)
+    U.nve_integration(1, 5, 1, 'P')
     
 
 

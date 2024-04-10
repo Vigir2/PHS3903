@@ -1,5 +1,7 @@
 import numpy as np
-import log_strings as log
+import log_strings as log 
+import os
+import parameters.paths as paths
 
 def write_xyz_file(l, fname):
     with open(fname, "w") as f:
@@ -27,6 +29,15 @@ def write_state_log(state_log, fname):
     np.save(fname, state_log)
     print(log.write_file.format(fname=fname))
 
+def write_state_variables(data: dict, name: str):
+    """Enregistre les variables d'états du système sous forme d'array numpy"""
+    for key, value in data.items():
+        fname = paths.state_variables_fname(name=name, var=key)
+        np.save(fname, value)
+    print("\\".join(fname.split("\\")[:-1]))
+    print(log.write_state_variables.format(var = ", ".join(list(data.keys())), loc = "\\".join(fname.split("\\")[:-1])))
+   
+        
 if __name__ == "__main__":
     from H2O import H2O
     m = []
