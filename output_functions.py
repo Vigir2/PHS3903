@@ -26,6 +26,7 @@ def write_trajectory(traj: np.ndarray, fname: str, dt: float, delta: float, dim=
     print(log.write_file.format(fname=fname))
 
 def write_state_log(state_log, fname):
+    """Enregistre l'état du système dans un fichier .npy"""
     np.save(fname, state_log)
     print(log.write_file.format(fname=fname))
 
@@ -36,8 +37,7 @@ def write_state_variables(data: dict, name: str):
         np.save(fname, value)
     print("\\".join(fname.split("\\")[:-1]))
     print(log.write_state_variables.format(var = ", ".join(list(data.keys())), loc = "\\".join(fname.split("\\")[:-1])))
-   
-        
+
 if __name__ == "__main__":
     from H2O import H2O
     m = []

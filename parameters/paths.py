@@ -20,12 +20,14 @@ def config_fname(name):
     return fname
 
 def state_log_fname(name):
+    """Nom de fichier utilisé pour les log"""
     fname = os.path.join(output, name, "state_log", name + ".npy")
     if not os.path.exists(os.path.join(output, name, "state_log")):
         os.makedirs(os.path.join(output, name, "state_log"))
     return fname
 
 def state_variables_fname(name: str, var: str):
+    """Nom de fichier utilisé pour les variables d'états"""
     date = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
     fname = os.path.join(output, name, "State_variables", name + "_" + state_var[var] + "_" + date + ".npy")
     if not os.path.exists(os.path.join(output, name, "State_variables")):

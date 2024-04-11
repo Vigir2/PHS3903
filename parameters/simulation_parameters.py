@@ -1,12 +1,14 @@
 import numpy as np
+import parameters.physical_constants as pc
+import parameters.h2O_model as h2O
 
-name = "test_nve"
-N = 50
+name = "test_glace"
+N = 100
 dim = 3
 
 
 a = 35 #[Ang]
-rc = 15
+rc = 18
 
 # Basis vectors
 b1 = np.array([1, 0, 0])
@@ -31,3 +33,10 @@ P = 10   #[bar]
 
 tau_p = 700
 tau_t = 700
+
+
+# Ewald parameters
+########################################
+
+delta1 = 0.01
+delta2 = 0.01

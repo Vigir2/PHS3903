@@ -2,6 +2,7 @@ import numpy as np
 import parameters.h2O_model as h2O
 import matplotlib.pyplot as plt
 import parameters.physical_constants as pc
+import parameters.simulation_parameters as simP
 
 def lennard_jones(r: float, rc: float, shifted: bool = True):
     """Retourne l'énergie associée au potentiel de Lennard-Jones en u * Å^2 / fs^2"""
@@ -30,12 +31,14 @@ def coulomb_force(r: float, q1: float, q2: float):
     """Retourne la force de Coulomb entre deux particules chargées en u * Å / fs^2"""
     out = pc.k * q1 * q2 / r**2
     return out
+
     
 if __name__ == "__main__":
-    r = np.linspace(3,20,200)
-    plt.plot(r, coulomb(r, rc=10, q1=h2O.q, q2=h2O.q))
-    plt.plot(r, coulomb(r, rc=10, q1=h2O.q, q2=h2O.q, shifted=True))
-    plt.plot(r, lennard_jones_force(r))
-    #plt.ylim(-100, 100)
-    plt.axhline(0)
-    plt.show()
+    pass
+    #r = np.linspace(3,20,200)
+    #plt.plot(r, coulomb(r, rc=10, q1=h2O.q, q2=h2O.q))
+    #plt.plot(r, coulomb(r, rc=10, q1=h2O.q, q2=h2O.q, shifted=True))
+    #plt.plot(r, lennard_jones_force(r))
+    ##plt.ylim(-100, 100)
+    #plt.axhline(0)
+    #plt.show()

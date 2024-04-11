@@ -96,7 +96,17 @@ class Universe:
             return T
     
     def pression(self, K: float = None):
-        """Calcule la pression du système en u / (Å * fs^2)"""
+        """
+        Calcule la pression du système en u / (Å * fs^2)
+        
+        Input
+        -----
+        - K (float): Énergie cinétique du système [Optionnel]
+
+        Output
+        ------
+        - P (float): Pression en u / (Å * fs^2)
+        """
         if K != None:
             v = self.virial
             for m in self.water_molecules:
@@ -150,9 +160,12 @@ class Universe:
         out_func.write_trajectory(self.trajectories, fname=paths.traj_fname(name=self.name), dt=dt, delta=delta)
    
     def __write_xyz(self):
+        """Enregistre la configuration actuelle du système dans un fichier .xyz"""
+        self.correct_position()
         out_func.write_xyz_file(self.water_molecules, fname=paths.config_fname(name=self.name))
 
     def __save_state_log(self):
+        """Enregistre l'état actuel du système dans un format pouvant être lu pour initier une nouvelle simulation"""
         out = np.zeros((self.N, 6, self.dim))
         for i in range(self.N):
             self.water_molecules[i].correct_cm_pos(a = self.a)
@@ -194,7 +207,7 @@ class Universe:
         -----
         - dt (float): Pas de temps utilisé pour l'intégration [fs]
         - n (int): Nombre de pas
-        - delta (int): Intervalle de pas de temps auquel les cordonnées sont enregistrées
+        - delta (int): Intervalles de pas de temps auxquels les cordonnées sont enregistrées
         - E, T, P (str): Quantités à mesurées pendant l'intégration
         """
         print(log.nve_initiation.format(time=(dt*n/1000), n=n), end="\n\n")
@@ -209,11 +222,11 @@ class Universe:
         if "P" in args:
             P = True
             data["P"] = []
-        for i in range(n):
+        for i in range(int(n)):
             print(f"n = {i}")
             print(self.energy(), end="\n\n")
             if i%delta == 0:
-                U.snapshot()
+                self.snapshot()
                 if E:
                     data["E"].append(self.total_energy)
                 if T:
@@ -228,22 +241,52 @@ class Universe:
         self.__save_state_log()
         self.__write_xyz()
     
-    def npt_integration(self, dt: float, n: int, delta: int, T0: float, P0: float):
+    def npt_integration(self, dt: float, n: int, delta: int, T0: float, P0: float, *args):
+        """
+        Effectue une intégration des équations du mouvement pour un ensemble NPT avec un algorithme de Verlet vitesse
+        
+        Input
+        -----
+        - dt (float): Pas de temps utilisé pour l'intégration [fs]
+        - n (int): Nombre de pas
+        - delta (int): Intervalles de pas de temps auxquels les cordonnées sont enregistrées
+        - T0 (float): Température cible [K]
+        - P0 (float): Pression cible [bar]
+        - E, H, T, P, V (str): Quantités à mesurées pendant l'intégration
+        """
+        print(log.npt_initiation.format(time=(dt*n/1000), n=n, T = T0, P = P0))
         P0 *= pc.bar_to_uÅfs
-        self.compute_forces()
+        data = dict()
+        E, T, P, H, V = False, False, False, False, False
+        if "E" in args:
+            E = True
+            data["E"] = []
+        if "T" in args:
+            T = True
+            data["T"] = []
+        if "P" in args:
+            P = True
+            data["P"] = []
+        if "H" in args:
+            H = True
+            data["H"] = []
+        if "V" in args:
+            V = True
+            data["V"] = []
+
+        Nf = lambda dim: 6 if dim == 3 else 3
+
         for i in range(int(n)):
-            print(i)
+            print(f"n = {i}")
             print(f"a = {self.a}")
             if i%delta == 0:
-                U.snapshot()
-            integ.npt_verlet_run(U=self, dt=dt, T0=T0, P0=P0)
-            U.correct_position()
-            print("T = ", U.temperature("T"), U.temperature("T", "r"))
-            print("P = ", U.pression() * pc.uÅfs_to_bar)
-        U.write_trajectories(dt=dt, delta=delta)
-        U.save_state_log()
-
-        #U.write_xyz()
+                self.snapshot()
+            integ.npt_verlet_run(U=self, dt=dt, T0=T0, P0=P0, Nf=Nf(self.dim))
+            self.correct_position()
+            print("T = ", self.temperature("t"), self.temperature("r"))
+            print("P = ", self.pressure * pc.uÅfs_to_bar, end="\n\n")
+        self.__write_trajectories(dt=dt, delta=delta)
+        self.__save_state_log()
 
 if __name__ == "__main__":
     U = Universe(name = simP.name, N = simP.N, T = simP.T, a = simP.a, dim=simP.dim)
@@ -252,8 +295,8 @@ if __name__ == "__main__":
     #U = Universe()
     #U = Universe("testvtf", a=simP.a, N=simP.N, T=simP.T, dim=3)
     #print(U.pression())
-    #U.npt_integration(dt = 2, n = 10, delta = 1, T0 = 100, P0 = 100)
-    U.nve_integration(1, 5, 1, 'P')
-    
+    U.npt_integration(dt = 1, n = 10000, delta = 2, T0 = 150, P0 = 1)
+    #U.nve_integration(1, 5, 1, 'P')
+
 
 
