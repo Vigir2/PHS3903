@@ -2,7 +2,7 @@ import numpy as np
 import parameters.h2O_model as h2O
 import matplotlib.pyplot as plt
 import parameters.physical_constants as pc
-import parameters.simulation_parameters as simP
+import math
 
 def lennard_jones(r: float, rc: float, shifted: bool = True):
     """Retourne l'énergie associée au potentiel de Lennard-Jones en u * Å^2 / fs^2"""
@@ -30,6 +30,14 @@ def coulomb(r: float, rc: float, q1: float, q2: float, shifted: bool = False):
 def coulomb_force(r: float, q1: float, q2: float):
     """Retourne la force de Coulomb entre deux particules chargées en u * Å / fs^2"""
     out = pc.k * q1 * q2 / r**2
+    return out
+
+def ewald_electrostatic(r, alpha, q1, q2):
+    out = 1 / (4 * np.pi * pc.epsilon0) * q1 * q2 / r * math.erfc(alpha * r)
+    return out
+
+def ewald_electrostatic_correction(r, alpha, q1, q2):
+    out = 1 / (4 * np.pi * pc.epsilon0) * q1 * q2 / r * math.erf(alpha * r)
     return out
 
     

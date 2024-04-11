@@ -283,20 +283,44 @@ class Universe:
                 self.snapshot()
             integ.npt_verlet_run(U=self, dt=dt, T0=T0, P0=P0, Nf=Nf(self.dim))
             self.correct_position()
-            print("T = ", self.temperature("t"), self.temperature("r"))
+            print("T = ", self.temp, self.temperature("t"), self.temperature("r"))
             print("P = ", self.pressure * pc.uÅfs_to_bar, end="\n\n")
         self.__write_trajectories(dt=dt, delta=delta)
         self.__save_state_log()
+    
+    def ewald_npt_integration(self, n, delta1, delta2):
+        E = pc.kb * self.T
+        #print("E = ", E)
+        delta1 *= E
+        delta2 *= E
+        alpha = 1/simP.rc * np.sqrt(-np.log((4 * np.pi * pc.epsilon0 * simP.rc * delta1)/(2*h2O.q)**2)) #[Å^-1]
+        Smax = (self.N * 4 * h2O.q)**2 #[e^2]
+        V = self.a**3
+        kmax2 = -4 * alpha**2 * np.log((2*pc.epsilon0 * V * delta2)/Smax) #[Å^-2]
+        u = 2 * np.pi * simP.b1 / self.a
+        v = 2 * np.pi * simP.b2 / self.a
+        w = 2 * np.pi * simP.b3 / self.a
+        rbasis = np.array([u, v, w])
+        umax = int(np.ceil(np.sqrt(kmax2/np.dot(u,u))))
+        vmax = int(np.ceil(np.sqrt(kmax2/np.dot(v,v))))
+        lambmax = int(np.ceil(np.sqrt(kmax2/np.dot(w,w))))
+        ewald_correction = alpha / (4 * np.pi**(3/2) * pc.epsilon0) * self.N * 6 * h2O.q**2
+        integ.compute_forces_ewald(self, simP.rc, self.a, alpha, umax, vmax, lambmax, rbasis, ewald_correction)
+
+
 
 if __name__ == "__main__":
-    U = Universe(name = simP.name, N = simP.N, T = simP.T, a = simP.a, dim=simP.dim)
+    #U = Universe(name = simP.name, N = simP.N, T = simP.T, a = simP.a, dim=simP.dim)
     #U = Universe(name="test_glace", input_state="Output\Test_integration_5000\state_log\Test_integration_5000.npy")
     #U.nve_integration(dt=1, n=150, delta=1)
     #U = Universe()
     #U = Universe("testvtf", a=simP.a, N=simP.N, T=simP.T, dim=3)
     #print(U.pression())
-    U.npt_integration(dt = 1, n = 10000, delta = 2, T0 = 150, P0 = 1)
-    #U.nve_integration(1, 5, 1, 'P')
-
+    #U.npt_integration(dt = 1, n = 500, delta = 2, T0 = 200, P0 = 1)
+    #U.nve_integration(1, 15, 1)
+    U = Universe("test", 100, 30, 300, 3)
+    U.ewald_npt_integration(100, 0.001, 0.001)
+    #U.ewald_npt_integration(100, 0.000001, 0.000001)
+    integ.compute_forces(U, rc=simP.rc, a=U.a)
 
 

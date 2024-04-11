@@ -3,6 +3,7 @@ import init_functions as init_func
 import parameters.h2O_model as h2O
 import parameters.simulation_parameters as simP
 from scipy.stats import special_ortho_group
+import parameters.physical_constants as pc
 
 class H2O:
     """
@@ -163,6 +164,7 @@ class H2O:
         """Retourne l'accélération angulaire de la molécule en [1/fs^2]"""
         inv = np.linalg.inv(self.inertia_tensor())
         return inv@(self.torque() - self.d_inertia_tensor()@self.rot_vel)
+        
     
     def __update_positions(self, R_n_1: np.ndarray, omega_n_05: np.ndarray, dt: float):
         """Met à jour les positions relatives lors de l'algorithme de verlet vitesse en rotation"""

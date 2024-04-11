@@ -70,9 +70,10 @@ def compute_forces(U: Universe, rc: float, a: float):
                     virial += np.dot(fij, R)
     setattr(U, "virial", virial)
     setattr(U, "potential_energy", psi)
+    print(psi)
     return
 
-def compute_forces_ewald(U: Universe, rc: float, a: float):
+def compute_forces_ewald(U: Universe, rc: float, a: float, alpha, umax, vmax, lambmax, rbasis, ewald_correction):
     """
     Calcule les forces du systèmes U, l'énergie potentielle et le Viriel
 
@@ -82,14 +83,47 @@ def compute_forces_ewald(U: Universe, rc: float, a: float):
     - rc (float): Rayon de coupure utilisé pour le calcul des forces
     - a (float): Paramètre de maille de la cellule de simulation
     """
-    alpha = 1/simP.rc * np.sqrt(-np.log((4 * np.pi * pc.epsilon0 * simP.rc * simP.delta1)/ (2*h2O.q)**2))
-    Smax = (2*U.N*h2O.q + 2 * U.N * h2O.q)**2
-    k2_max = -4 * alpha**2 * np.log(2 * pc.epsilon0 * U.a**3 * simP.delta2 / Smax)
-
+    psi = 0
+    psi -= ewald_correction
     for m in U:
         m._H2O__reset_forces()
+        rH1H2 = np.linalg.norm(m[2] - m[1])
+        rH1M = np.linalg.norm(m[1] - m[3])
+        rH2M = np.linalg.norm(m[2] - m[3])
+        psi -= f.ewald_electrostatic_correction(rH1H2, alpha, q[1], q[2])
+        psi -= f.ewald_electrostatic_correction(rH1M, alpha, q[1], q[3])
+        psi -= f.ewald_electrostatic_correction(rH2M, alpha, q[1], q[3])
+    # Reciprocal space summation
+    V = U.a**3
+    for lamb in range(lambmax + 1):
+        if lamb == 0:
+            for v in range(vmax + 1):
+                if (lamb == 0) and (v == 0):
+                    for u in range(1, umax + 1):
+                        k = u * rbasis[0] + v * rbasis[1] + lamb * rbasis[2]
+                        S = 0
+                        for m in U:
+                            S += h2O.q * np.exp(-1.j * np.dot(k, m[1])) + h2O.q * np.exp(-1.j * np.dot(k, m[2])) - 2*h2O.q * np.exp(-1.j * np.dot(k, m[3]))
+                        S2 = np.absolute(S)
+                        psi += 1 / (V * pc.epsilon0) * np.exp(-np.dot(k,k)/(4*alpha**2)) / np.dot(k,k) * S2
+                elif (lamb == 0) and (v > 0):
+                    for u in range(-umax, umax + 1):
+                        k = u * rbasis[0] + v * rbasis[1] + lamb * rbasis[2]
+                        S = 0
+                        for m in U:
+                            S += h2O.q * np.exp(-1.j * np.dot(k, m[1])) + h2O.q * np.exp(-1.j * np.dot(k, m[2])) - 2*h2O.q * np.exp(-1.j * np.dot(k, m[3]))
+                        S2 = np.absolute(S)
+                        psi += 1 / (V * pc.epsilon0) * np.exp(-np.dot(k,k)/(4*alpha**2)) / np.dot(k,k) * S2  
+        elif lamb > 0:
+            for v in range(-vmax, vmax + 1):
+                for u in range(-umax, umax + 1):
+                    k = u * rbasis[0] + v * rbasis[1] + lamb * rbasis[2]
+                    S = 0
+                    for m in U:
+                        S += h2O.q * np.exp(-1.j * np.dot(k, m[1])) + h2O.q * np.exp(-1.j * np.dot(k, m[2])) - 2*h2O.q * np.exp(-1.j * np.dot(k, m[3]))
+                    S2 = np.absolute(S)
+                    psi += 1 / (V * pc.epsilon0) * np.exp(-np.dot(k,k)/(4*alpha**2)) / np.dot(k,k) * S2
     virial = 0
-    psi = 0
     for i in range(4 * U.N - 4):
         for j in range(4*(math.floor(i/4) + 1), 4 * U.N):
             if (i%4 == 0) and (j%4 == 0):
@@ -111,11 +145,12 @@ def compute_forces_ewald(U: Universe, rc: float, a: float):
                 R = minimum_image(U[math.floor(j/4)][j%4] - U[math.floor(i/4)][i%4], a=a)
                 r = np.linalg.norm(R)
                 if r < rc:
-                    psi += f.coulomb(r=r, rc=rc, q1=q[i%4], q2=q[j%4], shifted=True)
+                    psi += f.ewald_electrostatic(r, alpha, q[i%4], q[j%4])
                     fij = f.coulomb_force(r=r, q1=q[i%4], q2=q[j%4]) * R/r # Force on j due to i
                     setattr(U[math.floor(j/4)], force[j%4], getattr(U[math.floor(j/4)], force[j%4]) + fij) 
                     setattr(U[math.floor(i/4)], force[i%4], getattr(U[math.floor(i/4)], force[i%4]) - fij)
                     virial += np.dot(fij, R)
+    print(psi)
     setattr(U, "virial", virial)
     setattr(U, "potential_energy", psi)
     return
@@ -255,3 +290,4 @@ def andersen(water_molecules, T, a, dt):
 
 if __name__ == "__main__":
     pass
+    
