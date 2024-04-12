@@ -8,7 +8,7 @@ dim = 3
 
 
 a = 30 #[Ang]
-rc = 15
+rc = 10
 
 # Basis vectors
 b1 = np.array([1, 0, 0])
@@ -31,12 +31,12 @@ security_distance = 4.0 #[Ang]
 T = 200 #[K]
 P = 10   #[bar]
 
-tau_p = 5000
+tau_p = 800
 tau_t = 250
 
 
 # Ewald parameters
 ########################################
 
-delta1 = 0.01
+delta1 = 0.001
 delta2 = 0.01

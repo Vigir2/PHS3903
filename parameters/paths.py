@@ -5,9 +5,10 @@ import numpy as np
 output = "Output"
 state_var = {"E": "Energy", "P": "Pressure", "T": "Temperature", "H": "Enthalpie", "t": 'Time'}
 
-def traj_fname(name):
+def traj_fname(name, format: str):
+    """Nom de fichier utilisé pour les trajectoires"""
     date = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
-    fname = os.path.join(output, name, "Trajectories", name + "_" + date + ".xyz")
+    fname = os.path.join(output, name, "Trajectories", name + "_" + date + f".{format}")
     if not os.path.exists(os.path.join(output, name, "Trajectories")):
         os.makedirs(os.path.join(output, name, "Trajectories"))
     return fname

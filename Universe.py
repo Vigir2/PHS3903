@@ -64,8 +64,10 @@ class Universe:
                     self.cm = np.array([m.cm_pos()])
             delattr(self, "cm")
         self.__remove_net_momentum()
-        self.compute_forces()
-        print(log.init_universe.format(name = self.name, N = self.N, T = self.temperature("T", "R"), P = self.pression() * pc.uÅfs_to_bar), end="\n\n")
+        #self.compute_forces()
+        self.temp = self.temperature("T", "R")
+        #self.pressure = self.pression()
+        #print(log.init_universe.format(name = self.name, N = self.N, T = self.temp, P = self.pressure * pc.uÅfs_to_bar), end="\n\n")
 
     def __getitem__(self, index):
         return self.water_molecules[index]
@@ -153,11 +155,11 @@ class Universe:
         else:
             self.trajectories = snap
     
-    def __write_trajectories(self, dt: float, delta: float):
+    def __write_trajectories(self, dt: float, delta: float, format: str, a: np.ndarray):
         """
         Écrit la trajectoire des molécules du système dans un fichier .xyz
         """
-        out_func.write_trajectory(self.trajectories, fname=paths.traj_fname(name=self.name), dt=dt, delta=delta)
+        out_func.write_trajectory(self.trajectories, fname=paths.traj_fname(name=self.name, format=format), dt=dt, a=a, delta=delta, format=format)
    
     def __write_xyz(self):
         """Enregistre la configuration actuelle du système dans un fichier .xyz"""
@@ -183,7 +185,11 @@ class Universe:
 
     def compute_forces(self):
         """Calcule les forces du système, l'énergie potentielle et le virriel"""
-        integ.compute_forces(U=self, rc=simP.rc, a=self.a)
+
+        if simP.rc <= self.a/2:
+            integ.compute_forces(U=self, rc=simP.rc, a=self.a)
+        else:
+            integ.compute_forces(U=self, rc=self.a/2, a=self.a)
     
     def energy(self):
         """Retourne l'énergie totale du système en [uÅ^2/fs^2]"""
@@ -236,10 +242,9 @@ class Universe:
             integ.nve_verlet_run(U=self, dt=dt)
             self.correct_position()
         data['t'] = np.arange(0, n*dt, delta)
-        self.__write_trajectories(dt=dt, delta=delta)
+        self.__write_trajectories(dt=dt, delta=delta, format="vtf", a=self.a)
         self.__save_state_variables(data=data)
         self.__save_state_log()
-        self.__write_xyz()
     
     def npt_integration(self, dt: float, n: int, delta: int, T0: float, P0: float, *args):
         """
@@ -257,6 +262,7 @@ class Universe:
         print(log.npt_initiation.format(time=(dt*n/1000), n=n, T = T0, P = P0))
         P0 *= pc.bar_to_uÅfs
         data = dict()
+        a = []
         E, T, P, H, V = False, False, False, False, False
         if "E" in args:
             E = True
@@ -275,22 +281,38 @@ class Universe:
             data["V"] = []
 
         Nf = lambda dim: 6 if dim == 3 else 3
-
         for i in range(int(n)):
             print(f"n = {i}")
             print(f"a = {self.a}")
-            if i%delta == 0:
-                self.snapshot()
-            integ.npt_verlet_run(U=self, dt=dt, T0=T0, P0=P0, Nf=Nf(self.dim))
-            self.correct_position()
             print("T = ", self.temp, self.temperature("t"), self.temperature("r"))
             print("P = ", self.pressure * pc.uÅfs_to_bar, end="\n\n")
-        self.__write_trajectories(dt=dt, delta=delta)
+            if i%delta == 0:
+                self.snapshot()
+                a.append(self.a)
+                if E:
+                    data["E"].append(self.energy())
+                if T:
+                    data["T"].append(self.temp)
+                if P:
+                    data["P"].append(self.pressure)
+                if H:
+                    if E:
+                        data["H"].append(data["E"][-1] + self.pressure * self.a**3)
+                    else:
+                        data["H"].append(self.energy() + self.pressure * self.a**3)
+                if V:
+                    data["V"].append(self.a**3)
+            integ.npt_verlet_run(U=self, dt=dt, T0=T0, P0=P0, Nf=Nf(self.dim))
+            self.correct_position()
+
+        self.__write_trajectories(dt=dt, delta=delta, a=a, format="vtf")
         self.__save_state_log()
+        self.__save_state_variables(data=data)
     
-    def ewald_npt_integration(self, n, delta1, delta2):
+    def ewald_nve_integration(self, n, delta, dt):
         E = pc.kb * self.T
         #print("E = ", E)
+        delta1, delta2 = simP.delta1, simP.delta2
         delta1 *= E
         delta2 *= E
         alpha = 1/simP.rc * np.sqrt(-np.log((4 * np.pi * pc.epsilon0 * simP.rc * delta1)/(2*h2O.q)**2)) #[Å^-1]
@@ -306,6 +328,13 @@ class Universe:
         lambmax = int(np.ceil(np.sqrt(kmax2/np.dot(w,w))))
         ewald_correction = alpha / (4 * np.pi**(3/2) * pc.epsilon0) * self.N * 6 * h2O.q**2
         integ.compute_forces_ewald(self, simP.rc, self.a, alpha, umax, vmax, lambmax, rbasis, ewald_correction)
+        for i in range(int(n)):
+            print(f"n = {i}")
+            print(self.energy(), end="\n\n")
+            if i%delta == 0:
+                self.snapshot()
+                integ.nve_verlet_run(self, dt, True, simP.rc, alpha, umax, vmax, lambmax, rbasis, ewald_correction)
+        self.__write_trajectories(dt=dt, delta=delta, format="vtf", a=self.a)
 
 
 
@@ -318,9 +347,12 @@ if __name__ == "__main__":
     #print(U.pression())
     #U.npt_integration(dt = 1, n = 500, delta = 2, T0 = 200, P0 = 1)
     #U.nve_integration(1, 15, 1)
-    U = Universe("test", 100, 30, 300, 3)
-    U.ewald_npt_integration(100, 0.001, 0.001)
+    U = Universe("test", 50, 20, 300, 3)
+    U.ewald_nve_integration(2000, 1, 2)
+    #U.ewald_npt_integration(100, 0.001, 0.001)
+    #U.nve_integration(1, 10, 1)
+    #U.npt_integration(dt = 1, n = 50, delta = 2, T0 = 200, P0 = 1)
     #U.ewald_npt_integration(100, 0.000001, 0.000001)
-    integ.compute_forces(U, rc=simP.rc, a=U.a)
+    #integ.compute_forces(U, rc=simP.rc, a=U.a)
 
 

@@ -13,12 +13,14 @@ def minimum_image(r, a: float):
     return r - a * np.rint(r/a)
 
 def tkinetic_energy(V: np.ndarray):
+    """Retourne l'énergie cinétique totale translationnelle pour un ensemble de vitesses"""
     K = 0
     for v in V:
         K += 1/2 * h2O.M * np.dot(v, v)
     return K
 
 def rkinetic_energy(J: np.ndarray, omega: np.ndarray):
+    """Retourne l'énergie cinétique rotationnelle pour un ensemble de vitesses rotationnnelles"""
     K = 0
     for i in range(J.shape[0]):
         K += 1/2 * np.dot(omega[i], J[i])
@@ -70,7 +72,6 @@ def compute_forces(U: Universe, rc: float, a: float):
                     virial += np.dot(fij, R)
     setattr(U, "virial", virial)
     setattr(U, "potential_energy", psi)
-    print(psi)
     return
 
 def compute_forces_ewald(U: Universe, rc: float, a: float, alpha, umax, vmax, lambmax, rbasis, ewald_correction):
@@ -87,12 +88,25 @@ def compute_forces_ewald(U: Universe, rc: float, a: float, alpha, umax, vmax, la
     psi -= ewald_correction
     for m in U:
         m._H2O__reset_forces()
-        rH1H2 = np.linalg.norm(m[2] - m[1])
-        rH1M = np.linalg.norm(m[1] - m[3])
-        rH2M = np.linalg.norm(m[2] - m[3])
-        psi -= f.ewald_electrostatic_correction(rH1H2, alpha, q[1], q[2])
-        psi -= f.ewald_electrostatic_correction(rH1M, alpha, q[1], q[3])
-        psi -= f.ewald_electrostatic_correction(rH2M, alpha, q[1], q[3])
+        RH1H2 = m[2] - m[1] # H2 - H1
+        RH1M = m[3] - m[1] # M - H1
+        RH2M = m[3] - m[2] # M - H2
+        rH1H2 = np.linalg.norm(RH1H2)
+        rH1M = np.linalg.norm(RH1M)
+        rH2M = np.linalg.norm(RH2M)
+        psi -= f.ewald_electrostatic_correction(rH1H2, alpha, q[1], q[2]) 
+        psi -= f.ewald_electrostatic_correction(rH1M, alpha, q[1], q[3]) 
+        psi -= f.ewald_electrostatic_correction(rH2M, alpha, q[1], q[3]) 
+        fH1H2 = f.ewald_electrostatic_force_correction(rH1H2, alpha, q[1], q[2]) * RH1H2
+        m.H2_force += fH1H2 
+        m.H1_force -= fH1H2
+        fH1M = f.ewald_electrostatic_force_correction(rH1M, alpha, q[1], q[3]) * RH1M
+        m.M_force += fH1M
+        m.H1_force -= fH1M
+        fH2M = f.ewald_electrostatic_force_correction(rH1M, alpha, q[1], q[3]) * RH2M
+        m.M_force += fH2M
+        m.H2_force -= fH2M
+
     # Reciprocal space summation
     V = U.a**3
     for lamb in range(lambmax + 1):
@@ -105,7 +119,12 @@ def compute_forces_ewald(U: Universe, rc: float, a: float, alpha, umax, vmax, la
                         for m in U:
                             S += h2O.q * np.exp(-1.j * np.dot(k, m[1])) + h2O.q * np.exp(-1.j * np.dot(k, m[2])) - 2*h2O.q * np.exp(-1.j * np.dot(k, m[3]))
                         S2 = np.absolute(S)
-                        psi += 1 / (V * pc.epsilon0) * np.exp(-np.dot(k,k)/(4*alpha**2)) / np.dot(k,k) * S2
+                        prefactor = np.exp(-np.dot(k,k)/(4*alpha**2)) / np.dot(k,k)
+                        psi += 1 / (V * pc.epsilon0) * prefactor * S2
+                        for m in U:
+                            m.H1_force += h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H1_pos)) * S) * k
+                            m.H2_force += h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H2_pos)) * S) * k
+                            m.M_force += -2*h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.M_pos)) * S) * k
                 elif (lamb == 0) and (v > 0):
                     for u in range(-umax, umax + 1):
                         k = u * rbasis[0] + v * rbasis[1] + lamb * rbasis[2]
@@ -113,7 +132,12 @@ def compute_forces_ewald(U: Universe, rc: float, a: float, alpha, umax, vmax, la
                         for m in U:
                             S += h2O.q * np.exp(-1.j * np.dot(k, m[1])) + h2O.q * np.exp(-1.j * np.dot(k, m[2])) - 2*h2O.q * np.exp(-1.j * np.dot(k, m[3]))
                         S2 = np.absolute(S)
-                        psi += 1 / (V * pc.epsilon0) * np.exp(-np.dot(k,k)/(4*alpha**2)) / np.dot(k,k) * S2  
+                        prefactor = np.exp(-np.dot(k,k)/(4*alpha**2)) / np.dot(k,k)
+                        psi += 1 / (V * pc.epsilon0) * prefactor * S2  
+                        for m in U:
+                            m.H1_force += h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H1_pos)) * S) * k
+                            m.H2_force += h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H2_pos)) * S) * k
+                            m.M_force += -2*h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.M_pos)) * S) * k
         elif lamb > 0:
             for v in range(-vmax, vmax + 1):
                 for u in range(-umax, umax + 1):
@@ -122,7 +146,12 @@ def compute_forces_ewald(U: Universe, rc: float, a: float, alpha, umax, vmax, la
                     for m in U:
                         S += h2O.q * np.exp(-1.j * np.dot(k, m[1])) + h2O.q * np.exp(-1.j * np.dot(k, m[2])) - 2*h2O.q * np.exp(-1.j * np.dot(k, m[3]))
                     S2 = np.absolute(S)
-                    psi += 1 / (V * pc.epsilon0) * np.exp(-np.dot(k,k)/(4*alpha**2)) / np.dot(k,k) * S2
+                    prefactor = np.exp(-np.dot(k,k)/(4*alpha**2)) / np.dot(k,k)
+                    psi += 1 / (V * pc.epsilon0) * prefactor * S2
+                    for m in U:
+                        m.H1_force += h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H1_pos)) * S) * k
+                        m.H2_force += h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H2_pos)) * S) * k
+                        m.M_force += -2*h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.M_pos)) * S) * k
     virial = 0
     for i in range(4 * U.N - 4):
         for j in range(4*(math.floor(i/4) + 1), 4 * U.N):
@@ -146,16 +175,15 @@ def compute_forces_ewald(U: Universe, rc: float, a: float, alpha, umax, vmax, la
                 r = np.linalg.norm(R)
                 if r < rc:
                     psi += f.ewald_electrostatic(r, alpha, q[i%4], q[j%4])
-                    fij = f.coulomb_force(r=r, q1=q[i%4], q2=q[j%4]) * R/r # Force on j due to i
+                    fij = f.ewald_electrostatic_force(r, alpha, q[i%4], q[j%4]) * R # Force on j due to i
                     setattr(U[math.floor(j/4)], force[j%4], getattr(U[math.floor(j/4)], force[j%4]) + fij) 
                     setattr(U[math.floor(i/4)], force[i%4], getattr(U[math.floor(i/4)], force[i%4]) - fij)
                     virial += np.dot(fij, R)
-    print(psi)
-    setattr(U, "virial", virial)
+    #setattr(U, "virial", virial)
     setattr(U, "potential_energy", psi)
     return
 
-def nve_verlet_run(U: Universe, dt: float):
+def nve_verlet_run(U: Universe, dt: float, ewald=True, rc = None, alpha = None, umax=None, vmax=None, lambmax=None, rbasis=None, ewald_correction=None):
     """Effectue une itération de verlet vitesse en ensemble NVE"""
     Fn = np.zeros((U.N, U.dim))
     Tn = np.zeros((U.N, U.dim))
@@ -184,7 +212,10 @@ def nve_verlet_run(U: Universe, dt: float):
     # n + 1
     for i in range(U.N):
         U.water_molecules[i]._H2O__update_positions(R_n_1 = R_n_1[i], omega_n_05 = omega_n_05[i], dt = dt)
-    U.compute_forces()
+    if ewald:
+        compute_forces_ewald(U=U, rc=rc, a=U.a, alpha=alpha, umax=umax, vmax=vmax, lambmax=lambmax, rbasis=rbasis, ewald_correction=ewald_correction)
+    else:
+        U.compute_forces()
     F_n_1 = np.zeros((U.N, U.dim))
     T_n_1 = np.zeros((U.N, U.dim))
     for i in range(U.N):

@@ -1,6 +1,5 @@
 import numpy as np
 import parameters.h2O_model as h2O
-import matplotlib.pyplot as plt
 import parameters.physical_constants as pc
 import math
 
@@ -40,6 +39,13 @@ def ewald_electrostatic_correction(r, alpha, q1, q2):
     out = 1 / (4 * np.pi * pc.epsilon0) * q1 * q2 / r * math.erf(alpha * r)
     return out
 
+def ewald_electrostatic_force(r, alpha, q1, q2):
+    out = (q1 * q2) / (4 * np.pi * pc.epsilon0 * r**2) * (math.erfc(alpha*r)/r + 2*alpha/np.sqrt(np.pi) * np.exp(-alpha**2 * r**2))
+    return out
+
+def ewald_electrostatic_force_correction(r, alpha, q1, q2):
+    out = (q1 * q2) / (4 * np.pi * pc.epsilon0 * r**2) * (math.erf(alpha * r)/r - 2*alpha/np.sqrt(np.pi) * np.exp(-alpha**2 * r**2))
+    return out
     
 if __name__ == "__main__":
     pass
