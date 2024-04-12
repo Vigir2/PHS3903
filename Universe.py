@@ -334,6 +334,7 @@ class Universe:
             if i%delta == 0:
                 self.snapshot()
                 integ.nve_verlet_run(self, dt, True, simP.rc, alpha, umax, vmax, lambmax, rbasis, ewald_correction)
+            U.correct_position()
         self.__write_trajectories(dt=dt, delta=delta, format="vtf", a=self.a)
 
 
@@ -348,7 +349,7 @@ if __name__ == "__main__":
     #U.npt_integration(dt = 1, n = 500, delta = 2, T0 = 200, P0 = 1)
     #U.nve_integration(1, 15, 1)
     U = Universe("test", 50, 20, 300, 3)
-    U.ewald_nve_integration(2000, 1, 2)
+    U.ewald_nve_integration(100, 1, 2)
     #U.ewald_npt_integration(100, 0.001, 0.001)
     #U.nve_integration(1, 10, 1)
     #U.npt_integration(dt = 1, n = 50, delta = 2, T0 = 200, P0 = 1)

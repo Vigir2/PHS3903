@@ -122,9 +122,9 @@ def compute_forces_ewald(U: Universe, rc: float, a: float, alpha, umax, vmax, la
                         prefactor = np.exp(-np.dot(k,k)/(4*alpha**2)) / np.dot(k,k)
                         psi += 1 / (V * pc.epsilon0) * prefactor * S2
                         for m in U:
-                            m.H1_force += h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H1_pos)) * S) * k
-                            m.H2_force += h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H2_pos)) * S) * k
-                            m.M_force += -2*h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.M_pos)) * S) * k
+                            m.H1_force += 2*h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H1_pos)) * S) * k
+                            m.H2_force += 2*h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H2_pos)) * S) * k
+                            m.M_force += -2*2*h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.M_pos)) * S) * k
                 elif (lamb == 0) and (v > 0):
                     for u in range(-umax, umax + 1):
                         k = u * rbasis[0] + v * rbasis[1] + lamb * rbasis[2]
@@ -135,9 +135,9 @@ def compute_forces_ewald(U: Universe, rc: float, a: float, alpha, umax, vmax, la
                         prefactor = np.exp(-np.dot(k,k)/(4*alpha**2)) / np.dot(k,k)
                         psi += 1 / (V * pc.epsilon0) * prefactor * S2  
                         for m in U:
-                            m.H1_force += h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H1_pos)) * S) * k
-                            m.H2_force += h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H2_pos)) * S) * k
-                            m.M_force += -2*h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.M_pos)) * S) * k
+                            m.H1_force += 2*h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H1_pos)) * S) * k
+                            m.H2_force += 2*h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H2_pos)) * S) * k
+                            m.M_force += -2*2*h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.M_pos)) * S) * k
         elif lamb > 0:
             for v in range(-vmax, vmax + 1):
                 for u in range(-umax, umax + 1):
@@ -149,9 +149,9 @@ def compute_forces_ewald(U: Universe, rc: float, a: float, alpha, umax, vmax, la
                     prefactor = np.exp(-np.dot(k,k)/(4*alpha**2)) / np.dot(k,k)
                     psi += 1 / (V * pc.epsilon0) * prefactor * S2
                     for m in U:
-                        m.H1_force += h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H1_pos)) * S) * k
-                        m.H2_force += h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H2_pos)) * S) * k
-                        m.M_force += -2*h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.M_pos)) * S) * k
+                        m.H1_force += 2*h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H1_pos)) * S) * k
+                        m.H2_force += 2*h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.H2_pos)) * S) * k
+                        m.M_force += -2*2*h2O.q / (pc.epsilon0 * V) * prefactor * np.imag(np.exp(1.j * np.dot(k, m.M_pos)) * S) * k
     virial = 0
     for i in range(4 * U.N - 4):
         for j in range(4*(math.floor(i/4) + 1), 4 * U.N):
