@@ -64,10 +64,10 @@ class Universe:
                     self.cm = np.array([m.cm_pos()])
             delattr(self, "cm")
         self.__remove_net_momentum()
-        #self.compute_forces()
+        self.compute_forces()
         self.temp = self.temperature("T", "R")
-        #self.pressure = self.pression()
-        #print(log.init_universe.format(name = self.name, N = self.N, T = self.temp, P = self.pressure * pc.uÅfs_to_bar), end="\n\n")
+        self.pressure = self.pression()
+        print(log.init_universe.format(name = self.name, N = self.N, T = self.temp, P = self.pressure * pc.uÅfs_to_bar), end="\n\n")
 
     def __getitem__(self, index):
         return self.water_molecules[index]
@@ -304,7 +304,7 @@ class Universe:
                     data["V"].append(self.a**3)
             integ.npt_verlet_run(U=self, dt=dt, T0=T0, P0=P0, Nf=Nf(self.dim))
             self.correct_position()
-
+        data['t'] = np.arange(0, n*dt, delta)
         self.__write_trajectories(dt=dt, delta=delta, a=a, format="vtf")
         self.__save_state_log()
         self.__save_state_variables(data=data)
@@ -348,11 +348,11 @@ if __name__ == "__main__":
     #print(U.pression())
     #U.npt_integration(dt = 1, n = 500, delta = 2, T0 = 200, P0 = 1)
     #U.nve_integration(1, 15, 1)
-    U = Universe("test", 50, 20, 300, 3)
-    U.ewald_nve_integration(100, 1, 2)
+    U = Universe("test", 100, 25, 300, 3)
+    #U.ewald_nve_integration(100, 1, 2)
     #U.ewald_npt_integration(100, 0.001, 0.001)
     #U.nve_integration(1, 10, 1)
-    #U.npt_integration(dt = 1, n = 50, delta = 2, T0 = 200, P0 = 1)
+    U.npt_integration(dt = 1, n = 10, delta = 1, T0 = 200, P0 = 1)
     #U.ewald_npt_integration(100, 0.000001, 0.000001)
     #integ.compute_forces(U, rc=simP.rc, a=U.a)
 

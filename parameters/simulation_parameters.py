@@ -1,6 +1,5 @@
 import numpy as np
 import parameters.physical_constants as pc
-import parameters.h2O_model as h2O
 
 name = "test_2D"
 N = 20
@@ -22,7 +21,7 @@ C = a*b3
 # Initial conditions
 ##########################################
 
-security_distance = 4.0 #[Ang]
+security_distance = 3.5 #[Ang]
 
 
 # Thermodynamical properties
@@ -40,3 +39,4 @@ tau_t = 250
 
 delta1 = 0.001
 delta2 = 0.01
+
