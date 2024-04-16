@@ -59,7 +59,6 @@ def write_state_variables(data: dict, name: str):
         fname = paths.state_variables_fname(name=name, var=key)
         print(fname)
         np.save(fname, value)
-    print("\\".join(fname.split("\\")[:-1]))
     print(log.write_state_variables.format(var = ", ".join(list(data.keys())), loc = "\\".join(fname.split("\\")[:-1])))
 
 if __name__ == "__main__":
