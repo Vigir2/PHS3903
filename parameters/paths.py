@@ -3,7 +3,7 @@ from datetime import datetime
 import numpy as np
 
 output = "Output"
-state_var = {"E": "Energy", "P": "Pressure", "T": "Temperature", "H": "Enthalpie", "t": 'Time'}
+state_var = {"E": "Energy", "P": "Pressure", "T": "Temperature", "H": "Enthalpie", "t": 'Time', "V": 'Volume'}
 
 def traj_fname(name, format: str):
     """Nom de fichier utilisé pour les trajectoires"""
