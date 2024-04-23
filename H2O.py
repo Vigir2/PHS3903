@@ -190,8 +190,16 @@ class H2O:
         self.M_pos = R_n_1 + rpos_new[3]
 
 if __name__ == "__main__":
-    print(np.floor(np.array([-0.1, 2.9, -5.6])))
-    m = H2O(3, 300)
-    print(m.rot_vel)
-    print(np.floor(0.99))
-    print(type(np.array([1,2,3])))
+    
+    with open("Presentation.xyz", "w") as f:
+        for i in range(10):
+            m = H2O(dim=3, T=100)
+            f.write("3\n\n")
+            f.write(f"O     {m[0][0]} {m[0][1]} {m[0][2]}\n")
+            f.write(f"H     {m[1][0]} {m[1][1]} {m[1][2]}\n")
+            f.write(f"H     {m[2][0]} {m[2][1]} {m[2][2]}\n")
+            m._H2O__rand_orientation()
+            f.write("3\n\n")
+            f.write(f"O     {m[0][0]} {m[0][1]} {m[0][2]}\n")
+            f.write(f"H     {m[1][0]} {m[1][1]} {m[1][2]}\n")
+            f.write(f"H     {m[2][0]} {m[2][1]} {m[2][2]}\n")

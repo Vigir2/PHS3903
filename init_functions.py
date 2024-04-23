@@ -89,9 +89,15 @@ if __name__ == "__main__":
     k = 1.38e-23  # Boltzmann constant in J/K
     T = 300       # Temperature in Kelvin
     m = 18.01528e-3 / 6.022e23  # Mass of a water molecule in kg
-
+    I = 1e-47 / pc.u * 10**20
+    #print(I)
     # Calculate root-mean-square speed
     v_rms = np.sqrt(3 * k * T / m)
+    print(v_rms)
+    #omega_rms = np.sqrt()
+    omega_rms = np.sqrt(3*pc.kb*300/I)
+    print(omega_rms)
+    print(np.sqrt(2)/omega_rms)
 
     print("Root-mean-square speed of water molecules at 300K:", v_rms * 1e-5, "m/s")
 

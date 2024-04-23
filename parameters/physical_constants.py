@@ -27,3 +27,6 @@ k = 1/(4 * np.pi * epsilon0) #[u * Å^3 / (fs^2 * e^2)]
 Kt = 0.6 /1e22 #[J / (ps * ang * K)]
 
 kb = kb_SI * joules_to_uÅfs #[u * Å^2 / fs^2 / K]
+
+uÅfs_to_eV = 1/(joules_to_uÅfs * e)
+

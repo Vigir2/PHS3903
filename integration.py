@@ -259,8 +259,8 @@ def npt_verlet_run(U: Universe, T0: float, P0: float, dt: float, Nf: int):
 
     # n+1/2
     Vt_05 = Vn - dt/2 * (baro_025 + thermo_025) * Vn
-    Jt_05 = Jn - dt/2 * (thermo_025 + baro_025) * Jn
-    omegat_05 = omegan - dt/2 * (thermo_025 + baro_025) * omegan
+    Jt_05 = Jn - dt/2 * (thermo_025) * Jn
+    omegat_05 = omegan - dt/2 * (thermo_025) * omegan
     Kt, Kr = tkinetic_energy(Vt_05), rkinetic_energy(J=Jt_05, omega=omegat_05)
     P_n_05 = U.pression(K=Kt)
     T_n_05 = 2 * (Kt + Kr) / (Nf * U.N * pc.kb)
@@ -295,7 +295,7 @@ def npt_verlet_run(U: Universe, T0: float, P0: float, dt: float, Nf: int):
     thermo_075 = thermo_05 + dt/(4*Q) * (Nf * U.N * (T_n_1 - T0) * pc.kb + W * baro_05**2 - pc.kb * T0)
     baro_075 = baro_05 + dt/4 * (3*U.a**3 / W * (P_n_1 - P0) - baro_05 * thermo_075)
     V_n_1 = Vt_1 - dt/2 * (thermo_075 + baro_075) * Vt_1
-    J_n_1 = Jt_1 - dt/2 * (thermo_075 + baro_075) * Jt_1
+    J_n_1 = Jt_1 - dt/2 * (thermo_075) * Jt_1
     omega_n_1 = np.zeros((U.N, U.dim))
     for i in range(U.N):
         U[i].cm_vel = V_n_1[i]

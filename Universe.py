@@ -8,6 +8,7 @@ import parameters.h2O_model as h2O
 import log_strings as log
 import parameters.simulation_parameters as simP
 import integration as integ
+import time
 
 
 class Universe:
@@ -56,7 +57,7 @@ class Universe:
                     while (np.any([np.linalg.norm(integ.minimum_image(cm - m.cm_pos(), a = self.a)) < simP.security_distance for cm in self.cm])):
                         m.rand_position(a = self.a)
                         n += 1
-                        if n >= 50:
+                        if n >= 75:
                             print(log.init_error.format(name = self.name) + log.error_water_placement.format(N = self.N, a = self.a, security_distance = simP.security_distance))
                             sys.exit()
                     self.cm = np.append(self.cm, m.cm_pos().reshape(1,self.dim), axis=0)
@@ -340,7 +341,9 @@ class Universe:
 
 
 if __name__ == "__main__":
-    #U = Universe(name = simP.name, N = simP.N, T = simP.T, a = simP.a, dim=simP.dim)
+    U = Universe(name = simP.name, N = simP.N, T = simP.T, a = simP.a, dim=simP.dim)
+    U.npt_integration(1, 4000, 1, 150, 1, "V", "P", "T")
+    #U._Universe__write_xyz()
     #U = Universe(name="test_glace", input_state="Output\Test_integration_5000\state_log\Test_integration_5000.npy")
     #U.nve_integration(dt=1, n=150, delta=1)
     #U = Universe()
@@ -348,11 +351,11 @@ if __name__ == "__main__":
     #print(U.pression())
     #U.npt_integration(dt = 1, n = 500, delta = 2, T0 = 200, P0 = 1)
     #U.nve_integration(1, 15, 1)
-    U = Universe("test", 100, 25, 300, 3)
+    #U = Universe("test", 100, 25, 300, 3)
     #U.ewald_nve_integration(100, 1, 2)
     #U.ewald_npt_integration(100, 0.001, 0.001)
     #U.nve_integration(1, 10, 1)
-    U.npt_integration(dt = 1, n = 10, delta = 1, T0 = 200, P0 = 1)
+    #U.npt_integration(dt = 1, n = 10, delta = 1, T0 = 200, P0 = 1)
     #U.ewald_npt_integration(100, 0.000001, 0.000001)
     #integ.compute_forces(U, rc=simP.rc, a=U.a)
 
