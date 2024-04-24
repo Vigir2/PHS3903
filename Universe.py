@@ -8,6 +8,8 @@ import parameters.h2O_model as h2O
 import log_strings as log
 import parameters.simulation_parameters as simP
 import integration as integ
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 import time
 
 
@@ -203,7 +205,7 @@ class Universe:
         for m in self.water_molecules:
             m.correct_cm_pos(a = self.a)
     
-    def nve_integration(self, dt: float, n: int, delta: int = 1, *args: str) -> None:
+    def nve_integration(self, dt: float, n: int, delta: int = 1, graphs: bool = True, **kwargs: bool) -> None:
         """
         Effectue une intégration des équation du mouvement pour un ensemble NVE avec un algorithme de Verlet vitesse
 
@@ -212,31 +214,59 @@ class Universe:
         - dt (float): Pas de temps utilisé pour l'intégration [fs]
         - n (int): Nombre de pas
         - delta (int): Intervalles de pas de temps auxquels les cordonnées sont enregistrées
-        - E, T, P (str): Quantités à mesurées pendant l'intégration
+        - graphs (bool): Trace en temps réel les variables thermodynamiques sélectionnées
+        - E, T, P (bool): Quantités à mesurées pendant l'intégration
         """
         print(log.nve_initiation.format(time=(dt*n/1000), n=n), end="\n\n")
         data = dict()
-        E, T, P = False, False, False
-        if "E" in args:
-            E = True
-            data["E"] = []
-        if "T" in args:
-            T = True
-            data["T"] = []
-        if "P" in args:
-            P = True
-            data["P"] = []
+        
+        if "E" in kwargs:
+            if kwargs["E"]:
+                data["E"] = []
+        if "T" in kwargs:
+            if kwargs["T"]:
+                data["T"] = []
+        if "P" in kwargs:
+            if kwargs["P"]:
+                data["P"] = []
+
+        if graphs:
+            data_length = len(data)
+            units = {"E": r"(KJ mol$^{{-1}}$)", "T": "(K)", "P": "bar"}
+            plt.ion()
+            fig, axes = plt.subplots(data_length, 1, sharex=True)
+            for index, value in enumerate(data):
+                axes[index].set_title(value)
+                axes[index].plot([],[])
+                axes[index].set_ylabel(units[value])
+                axes[index].axhline(y = 0, linestyle='--', color = 'k')
+            axes[-1].set_xlabel("t (fs)")
+            plt.subplots_adjust(hspace=0.4)
+
         for i in range(int(n)):
             print(f"n = {i}, t = {i * dt} fs")
             print(np.array(self.energy()) / self.N * pc.uÅfs_to_KJ_mol, end="\n\n")
             if i%delta == 0:
                 self.snapshot()
-                if E:
-                    data["E"].append(self.total_energy)
-                if T:
+                if "E" in data:
+                    data["E"].append(self.total_energy[0]/self.N*pc.uÅfs_to_KJ_mol)
+                if "T" in data:
                     data["T"].append(self.temperature("T", "R"))
-                if P:
-                    data["P"].append(self.pression())
+                if "P" in data:
+                    data["P"].append(self.pression()*pc.uÅfs_to_bar)
+                if graphs:
+                    for index, key in enumerate(data):
+                        axes[index].lines[0].set_ydata(data[key])
+                        axes[index].lines[0].set_xdata(np.arange(0, i + 1, delta))
+                        axes[index].lines[1].remove()
+                        axes[index].axhline(y = np.mean(data[key]), linestyle='--', color='k')
+                        axes[index].set_title(f"{key}, {np.mean(data[key]):.3f}")
+                        axes[index].relim()
+                        axes[index].autoscale_view()
+                    fig.canvas.draw()
+                    fig.canvas.flush_events()
+                    time.sleep(0.1)
+
             integ.nve_verlet_run(U=self, dt=dt)
             self.correct_position()
             self.__remove_net_momentum()
@@ -245,7 +275,7 @@ class Universe:
         self.__save_state_variables(data=data)
         self.__save_state_log()
     
-    def npt_integration(self, dt: float, n: int, delta: int, T0: float, P0: float, *args: str) -> None:
+    def npt_integration(self, dt: float, n: int, delta: int, T0: float, P0: float, graphs: bool = True, **kwargs: str) -> None:
         """
         Effectue une intégration des équations du mouvement pour un ensemble NPT avec un algorithme de Verlet vitesse
         
@@ -256,51 +286,76 @@ class Universe:
         - delta (int): Intervalles de pas de temps auxquels les cordonnées sont enregistrées
         - T0 (float): Température cible [K]
         - P0 (float): Pression cible [bar]
-        - E, H, T, P, V (str): Quantités à mesurées pendant l'intégration
+        - graphs (bool): Trace en temps réel les variables thermodynamiques sélectionnées
+        - E, H, T, P, V (bool): Quantités à mesurées pendant l'intégration
         """
         print(log.npt_initiation.format(time=(dt*n/1000), n=n, T = T0, P = P0))
         P0 *= pc.bar_to_uÅfs
         data = dict()
         a = []
-        E, T, P, H, V = False, False, False, False, False
-        if "E" in args:
-            E = True
-            data["E"] = []
-        if "T" in args:
-            T = True
-            data["T"] = []
-        if "P" in args:
-            P = True
-            data["P"] = []
-        if "H" in args:
-            H = True
-            data["H"] = []
-        if "V" in args:
-            V = True
-            data["V"] = []
+        if "E" in kwargs:
+            if kwargs["E"]:
+                data["E"] = []
+        if "T" in kwargs:
+            if kwargs["T"]:
+                data["T"] = []
+        if "P" in kwargs:
+            if kwargs["P"]:
+                data["P"] = []
+        if "H" in kwargs:
+            if kwargs["H"]:
+                data["H"] = []
+        if "V" in kwargs:
+            if kwargs["V"]:
+                data["V"] = []
+        
+        if graphs:
+            data_length = len(data)
+            units = {"E": r"(KJ mol$^{{-1}}$)", "T": "(K)", "P": "bar", "V": r"Å$^3$", "H": r"(KJ mol$^{{-1}}$)"}
+            plt.ion()
+            fig, axes = plt.subplots(data_length, 1, sharex=True)
+            for index, value in enumerate(data):
+                axes[index].set_title(value)
+                axes[index].plot([],[])
+                axes[index].set_ylabel(units[value])
+                axes[index].axhline(y = 0, linestyle='--', color = 'k')
+            axes[-1].set_xlabel("t (fs)")
+            plt.subplots_adjust(hspace=0.4)
 
         Nf = lambda dim: 6 if dim == 3 else 3
         for i in range(int(n)):
-            print(f"n = {i}")
+            print(f"n = {i}, t = {i * dt} fs")
             print(f"a = {self.a}")
-            print("T = ", self.temp, self.temperature("t"), self.temperature("r"))
-            print("P = ", self.pressure * pc.uÅfs_to_bar, end="\n\n")
+            print(f"T = {self.temp} K")
+            print(f"P = {self.pressure * pc.uÅfs_to_bar} bar", end="\n\n")
             if i%delta == 0:
                 self.snapshot()
                 a.append(self.a)
-                if E:
-                    data["E"].append(self.energy())
-                if T:
+                if "E" in data:
+                    data["E"].append(self.energy() / self.N * pc.uÅfs_to_KJ_mol)
+                if "T" in data:
                     data["T"].append(self.temp)
-                if P:
-                    data["P"].append(self.pressure)
-                if H:
-                    if E:
-                        data["H"].append(data["E"][-1] + self.pressure * self.a**3)
+                if "P" in data:
+                    data["P"].append(self.pressure * pc.uÅfs_to_bar)
+                if "H" in data:
+                    if "E" in data:
+                        data["H"].append(data["E"][-1] + (self.pressure * self.a**3) / self.N * pc.uÅfs_to_KJ_mol)
                     else:
-                        data["H"].append(self.energy() + self.pressure * self.a**3)
-                if V:
+                        data["H"].append((self.energy() + self.pressure * self.a**3) / self.N * pc.uÅfs_to_KJ_mol)
+                if "V" in data:
                     data["V"].append(self.a**3)
+                if graphs:
+                    for index, key in enumerate(data):
+                        axes[index].lines[0].set_ydata(data[key])
+                        axes[index].lines[0].set_xdata(np.arange(0, i + 1, delta))
+                        axes[index].lines[1].remove()
+                        axes[index].axhline(y = np.mean(data[key]), linestyle='--', color='k')
+                        axes[index].set_title(f"{key}, {np.mean(data[key]):.3f}")
+                        axes[index].relim()
+                        axes[index].autoscale_view()
+                    fig.canvas.draw()
+                    fig.canvas.flush_events()
+                    time.sleep(0.1)
             integ.npt_verlet_run(U=self, dt=dt, T0=T0, P0=P0, Nf=Nf(self.dim))
             self.correct_position()
             self.__remove_net_momentum()
@@ -341,14 +396,14 @@ class Universe:
 
 if __name__ == "__main__":
     U = Universe(name = simP.name, N = simP.N, T = simP.T, a = simP.a, dim=simP.dim)
+    #U.npt_integration(dt = 1, n = 50, delta = 1, T0 = 300, P0 = 10, graphs=True, T=True, P=True, V=True)
+    U.nve_integration(dt=1, n=150, delta=1, graphs=True, E=True, P=True, T=True)
     #U.npt_integration(1, 4000, 1, 150, 1, "V", "P", "T")
     #U._Universe__write_xyz()
     #U = Universe(name="test_glace", input_state="Output\Test_integration_5000\state_log\Test_integration_5000.npy")
-    U.nve_integration(dt=1, n=12, delta=1)
     #U = Universe()
     #U = Universe("testvtf", a=simP.a, N=simP.N, T=simP.T, dim=3)
     #print(U.pression())
-    #U.npt_integration(dt = 1, n = 500, delta = 2, T0 = 200, P0 = 1)
     #U.nve_integration(1, 15, 1)
     #U = Universe("test", 100, 25, 300, 3)
     #U.ewald_nve_integration(100, 1, 2)

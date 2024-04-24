@@ -30,8 +30,8 @@ security_distance = 2.5 #[Ang]
 T = 300 #[K]
 P = 10   #[bar]
 
-tau_p = 800
-tau_t = 250
+tau_p = 10000
+tau_t = 500
 
 
 # Ewald parameters
