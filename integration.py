@@ -6,31 +6,31 @@ import forces as f
 import parameters.h2O_model as h2O
 import parameters.physical_constants as pc
 import init_functions as init
-
 import numpy as np
-def minimum_image(r, a: float):
+
+q = [None, h2O.q, h2O.q, -2*h2O.q]
+name = [None, "H1_pos", "H2_pos", "M_pos"]
+force = [None, "H1_force", "H2_force", "M_force"]
+
+def minimum_image(r, a: float) -> np.ndarray:
     """Retourne la distance associée à l'image la plus proche entre deux atomes d'après les conditions frontières périodiques"""
     return r - a * np.rint(r/a)
 
-def tkinetic_energy(V: np.ndarray):
+def tkinetic_energy(V: np.ndarray) -> float:
     """Retourne l'énergie cinétique totale translationnelle pour un ensemble de vitesses"""
     K = 0
     for v in V:
         K += 1/2 * h2O.M * np.dot(v, v)
     return K
 
-def rkinetic_energy(J: np.ndarray, omega: np.ndarray):
+def rkinetic_energy(J: np.ndarray, omega: np.ndarray) -> float:
     """Retourne l'énergie cinétique rotationnelle pour un ensemble de vitesses rotationnnelles"""
     K = 0
     for i in range(J.shape[0]):
         K += 1/2 * np.dot(omega[i], J[i])
     return K
 
-q = [None, h2O.q, h2O.q, -2*h2O.q]
-name = [None, "H1_pos", "H2_pos", "M_pos"]
-force = [None, "H1_force", "H2_force", "M_force"]
-
-def compute_forces(U: Universe, rc: float, a: float):
+def compute_forces(U: Universe, rc: float, a: float) -> None:
     """
     Calcule les forces du systèmes U, l'énergie potentielle et le Viriel
 
@@ -65,14 +65,14 @@ def compute_forces(U: Universe, rc: float, a: float):
                 R = minimum_image(U[math.floor(j/4)][j%4] - U[math.floor(i/4)][i%4], a=a)
                 r = np.linalg.norm(R)
                 if r < rc:
-                    psi += f.coulomb(r=r, rc=rc, q1=q[i%4], q2=q[j%4], shifted=True)
+                    energy = f.coulomb(r=r, rc=rc, q1=q[i%4], q2=q[j%4], shifted=False)
+                    virial += energy
+                    psi += energy
                     fij = f.coulomb_force(r=r, q1=q[i%4], q2=q[j%4]) * R/r # Force on j due to i
                     setattr(U[math.floor(j/4)], force[j%4], getattr(U[math.floor(j/4)], force[j%4]) + fij) 
                     setattr(U[math.floor(i/4)], force[i%4], getattr(U[math.floor(i/4)], force[i%4]) - fij)
-                    virial += np.dot(fij, R)
     setattr(U, "virial", virial)
     setattr(U, "potential_energy", psi)
-    return
 
 def compute_forces_ewald(U: Universe, rc: float, a: float, alpha, umax, vmax, lambmax, rbasis, ewald_correction):
     """
@@ -183,7 +183,7 @@ def compute_forces_ewald(U: Universe, rc: float, a: float, alpha, umax, vmax, la
     setattr(U, "potential_energy", psi)
     return
 
-def nve_verlet_run(U: Universe, dt: float, ewald=True, rc = None, alpha = None, umax=None, vmax=None, lambmax=None, rbasis=None, ewald_correction=None):
+def nve_verlet_run(U: Universe, dt: float) -> None:
     """Effectue une itération de verlet vitesse en ensemble NVE"""
     Fn = np.zeros((U.N, U.dim))
     Tn = np.zeros((U.N, U.dim))
@@ -212,10 +212,7 @@ def nve_verlet_run(U: Universe, dt: float, ewald=True, rc = None, alpha = None, 
     # n + 1
     for i in range(U.N):
         U.water_molecules[i]._H2O__update_positions(R_n_1 = R_n_1[i], omega_n_05 = omega_n_05[i], dt = dt)
-    if ewald:
-        compute_forces_ewald(U=U, rc=rc, a=U.a, alpha=alpha, umax=umax, vmax=vmax, lambmax=lambmax, rbasis=rbasis, ewald_correction=ewald_correction)
-    else:
-        U.compute_forces()
+    U.compute_forces()
     F_n_1 = np.zeros((U.N, U.dim))
     T_n_1 = np.zeros((U.N, U.dim))
     for i in range(U.N):
@@ -225,7 +222,7 @@ def nve_verlet_run(U: Universe, dt: float, ewald=True, rc = None, alpha = None, 
     J_n_1 = J_n_05 + T_n_1 * dt/2 #O(Δt2)
     for i in range(U.N):
         U[i].cm_vel = V_n_1[i]
-        U[i].rot_vel = np.linalg.inv(U[i].inertia_tensor())@J_n_1[i]
+        U[i].rot_vel = np.linalg.solve(U[i].inertia_tensor(), J_n_1[i])
 
 def npt_verlet_run(U: Universe, T0: float, P0: float, dt: float, Nf: int):
     Q = Nf * U.N * pc.kb * simP.tau_t**2
@@ -311,12 +308,6 @@ def npt_verlet_run(U: Universe, T0: float, P0: float, dt: float, Nf: int):
     U.thermo = thermo_1
     U.pressure = P_n_1
     U.temp = T_n_1
-
-def andersen(water_molecules, T, a, dt):
-    p = pc.Kt * a * dt / (pc.kb_SI * len(water_molecules))
-    for m in water_molecules:
-        if np.random.uniform(0, 1) < p:
-            m.rot_vel = init.random_rot_velocity(m.inertia_tensor(), T, dim = 3)
     
 
 if __name__ == "__main__":

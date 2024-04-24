@@ -3,13 +3,12 @@ import init_functions as init_func
 import parameters.h2O_model as h2O
 import parameters.simulation_parameters as simP
 from scipy.stats import special_ortho_group
-import parameters.physical_constants as pc
 
 class H2O:
     """
     Molécule d'eau à 4 sites
     """
-    def __init__(self, dim: int = None, T: int = None, state: np.ndarray = None):
+    def __init__(self, dim: int = None, T: int = None, state: np.ndarray = None) -> None:
         """
         Crée une molécule d'eau
         
@@ -38,16 +37,16 @@ class H2O:
         # Atomic forces initialization
         self.O_force, self.H1_force, self.H2_force, self.M_force = (np.zeros(self.dim) for i in range(4))
     
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> np.ndarray:
         pos_index = [self.O_pos, self.H1_pos, self.H2_pos, self.M_pos]
         return pos_index[index]
     
-    def cm_pos(self):
+    def cm_pos(self) -> np.ndarray:
         """Retourne la position du centre de masse de la molécule en Å"""
         sum = h2O.mH * (self.H1_pos + self.H2_pos) + h2O.mO * self.O_pos
         return sum/h2O.M
     
-    def rpos(self, M=False):
+    def rpos(self, M: bool = False) -> np.ndarray:
         """
         Calcule les positions relatives des atomes de la molécule par rapport au centre de masse.
 
@@ -69,13 +68,13 @@ class H2O:
         else:
              return self.O_pos - cm, self.H1_pos - cm, self.H2_pos - cm
     
-    def virial_correction(self):
+    def virial_correction(self) -> float:
         """Retourne la correction au Viriel de la molécule pour prendre en compte la rigidité de la molécule"""
         rpos = self.rpos(M=True)
         s = np.dot(self.O_force, rpos[0]) + np.dot(self.H1_force, rpos[1]) + np.dot(self.H2_force, rpos[2]) + np.dot(self.M_force, rpos[3])
         return s
 
-    def __rand_orientation(self):
+    def __rand_orientation(self) -> None:
         """Applique une rotation aléatoire sur la molécule"""
         cm = self.cm_pos()
         rotation_matrix = special_ortho_group.rvs(dim=self.dim)      
@@ -83,13 +82,13 @@ class H2O:
         r_pos_rotated = np.array([rotation_matrix@r_pos[i] for i in range(4)])
         self.O_pos, self.H1_pos, self.H2_pos, self.M_pos = cm + r_pos_rotated[0], cm + r_pos_rotated[1], cm + r_pos_rotated[2], cm + r_pos_rotated[3]
 
-    def rand_position(self, a: float):
+    def rand_position(self, a: float) -> None:
         """Déplace la molécule à une position arbitraire dans la cellule de simulation"""
         r = init_func.random_pos(0, a, self.dim)
         self.O_pos, self.H1_pos, self.H2_pos, self.M_pos = self.O_pos + r, self.H1_pos + r, self.H2_pos + r, self.M_pos + r
         self.correct_cm_pos(a=a)
 
-    def inertia_tensor(self):
+    def inertia_tensor(self) -> np.ndarray:
         """Retourne le tenseur d'inertie de la molécule"""
         O_rpos, H1_rpos, H2_rpos = self.rpos(M=False)
         Ixx = h2O.mO * (O_rpos[1]**2 + O_rpos[2]**2) + h2O.mH * (H1_rpos[1]**2 + H1_rpos[2]**2) + h2O.mH * (H2_rpos[1]**2 + H2_rpos[2]**2)
@@ -100,7 +99,7 @@ class H2O:
         Iyz = -(h2O.mO * O_rpos[1]*O_rpos[2] + h2O.mH * H1_rpos[1]*H1_rpos[2] + h2O.mH * H2_rpos[1]*H2_rpos[2])
         return np.array([[Ixx, Ixy, Ixz], [Ixy, Iyy, Iyz], [Ixz, Iyz, Izz]])
     
-    def d_inertia_tensor(self):
+    def d_inertia_tensor(self) -> np.ndarray:
         """Retourne la dérivée temporelle du tenseur d'inertie de la molécule"""
         omega = self.rot_vel
         I = self.inertia_tensor()
@@ -112,11 +111,11 @@ class H2O:
         I_yz = omega[0] * (I[1,1] - I[2,2]) - omega[1] * I[0, 1] + omega[2] * I[0,2]
         return np.array([[I_xx, I_xy, I_xz], [I_xy, I_yy, I_yz], [I_xz, I_yz, I_zz]])
 
-    def __reset_forces(self):
+    def __reset_forces(self) -> None:
         """Remet à 0 les forces de la molécules"""
         self.O_force, self.H1_force, self.H2_force, self.M_force = (np.zeros(self.dim) for i in range(4))
 
-    def kinetic_energy(self, *args: str):
+    def kinetic_energy(self, *args: str) -> float:
         """
         Retourne l'énergie cinétique translationnelle et/ou rotationnelle de la molécule
 
@@ -137,7 +136,7 @@ class H2O:
             K += 1/2 * np.dot(self.rot_vel, J)
         return K
 
-    def correct_cm_pos(self, a: float):
+    def correct_cm_pos(self, a: float) -> None:
         """Ajuste la position de la molécule pour qu'elle reste dans la cellule de simulation"""
         cm = self.cm_pos()
         self.O_pos -= np.floor(cm/a) * a
@@ -145,28 +144,27 @@ class H2O:
         self.H2_pos -= np.floor(cm/a) * a
         self.M_pos -= np.floor(cm/a) * a
 
-    def cm_force(self):
+    def cm_force(self) -> np.ndarray:
         """Retourne la force totale exercée sur le centre de masse de le molécule en [u * Å / fs^2]"""
         force = self.O_force + self.H1_force + self.H2_force + self.M_force
         return force
 
-    def torque(self):
+    def torque(self) -> np.ndarray:
         """Retourne le couple totale exercé sur la molécule en [u * Å^2 / fs^2]"""
         rpos = self.rpos(M=True)
         torque = np.cross(rpos[0], self.O_force) + np.cross(rpos[1], self.H1_force) + np.cross(rpos[2], self.H2_force) + np.cross(rpos[3], self.M_force)
         return torque
 
-    def ang_momentum(self):
+    def ang_momentum(self) -> np.ndarray:
         """Retourne le moment cinétique de la molécule en [u * Å^2 / fs]"""
         return self.inertia_tensor()@self.rot_vel
     
-    def omega_dot(self):
+    def omega_dot(self) -> np.ndarray:
         """Retourne l'accélération angulaire de la molécule en [1/fs^2]"""
-        inv = np.linalg.inv(self.inertia_tensor())
-        return inv@(self.torque() - self.d_inertia_tensor()@self.rot_vel)
-        
+        omega_dot = np.linalg.solve(self.inertia_tensor(), (self.torque() - self.d_inertia_tensor()@self.rot_vel))
+        return omega_dot
     
-    def __update_positions(self, R_n_1: np.ndarray, omega_n_05: np.ndarray, dt: float):
+    def __update_positions(self, R_n_1: np.ndarray, omega_n_05: np.ndarray, dt: float) -> None:
         """Met à jour les positions relatives lors de l'algorithme de verlet vitesse en rotation"""
         rpos = self.rpos(M=True)
         rpos_new = np.zeros((4, self.dim))
@@ -201,5 +199,5 @@ if __name__ == "__main__":
             m._H2O__rand_orientation()
             f.write("3\n\n")
             f.write(f"O     {m[0][0]} {m[0][1]} {m[0][2]}\n")
-            f.write(f"H     {m[1][0]} {m[1][1]} {m[1][2]}\n")
+            f.write(f"H     {m[1][0]} {m[1][1]} {m[1][2]}\n") 
             f.write(f"H     {m[2][0]} {m[2][1]} {m[2][2]}\n")

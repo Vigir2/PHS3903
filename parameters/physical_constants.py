@@ -1,4 +1,8 @@
 import numpy as np
+from pint import UnitRegistry
+ureg = UnitRegistry()
+
+# SI constants #
 
 kb_SI = 1.380649e-23 #[J/K]
 
@@ -10,23 +14,27 @@ Na = 6.02214076e23 #[1/mol]
 
 e = 1.602176634e-19 #[C]
 
-joules_to_uÅfs = 1e-10 / u # Converts J to u * Å^2 / fs^2
 
-newtons_to_uÅfs = 1e-20 / u # Converts N to u * Å / fs^2
+# Unit converters #
 
-uÅfs_to_Pa = u * 1e40
+uÅfs_to_Pa = ureg("amu/angstrom/fs^2").to("Pa").magnitude
 
-bar_to_uÅfs = joules_to_uÅfs / 1e25
+bar_to_uÅfs = ureg("bar").to("amu/angstrom/fs^2").magnitude
 
-uÅfs_to_bar = 1 / bar_to_uÅfs
+uÅfs_to_bar = ureg("amu/angstrom/fs^2").to("bar").magnitude
 
-epsilon0 = epsilon0_SI * u / e**2 #[e^2 * fs^2 / (u * Å^3)]
+uÅfs_to_eV = ureg("amu*angstrom^2/fs^2").to("eV").magnitude
+
+uÅfs_to_KJ_mol = ureg("amu*angstrom^2/fs^2/molecule").to("kJ/mol").magnitude
+
+KJ_mol_to_uÅfs = ureg("kJ/mol").to("amu*angstrom^2/fs^2/molecule").magnitude
+
+
+# Physical constants in uÅfs unit system #
+
+epsilon0 = epsilon0_SI * ureg("F/m").to("e^2 * fs^2 / u / angstrom^3").magnitude #[e^2 * fs^2 / (u * Å^3)]
 
 k = 1/(4 * np.pi * epsilon0) #[u * Å^3 / (fs^2 * e^2)]
 
-Kt = 0.6 /1e22 #[J / (ps * ang * K)]
-
-kb = kb_SI * joules_to_uÅfs #[u * Å^2 / fs^2 / K]
-
-uÅfs_to_eV = 1/(joules_to_uÅfs * e)
+kb = kb_SI * ureg("J/K").to("amu*angstrom^2/fs^2/K").magnitude #[u * Å^2 / fs^2 / K]
 

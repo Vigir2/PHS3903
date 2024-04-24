@@ -1,12 +1,9 @@
 import numpy as np
+import math
+import pint
+from pint import constants
 
-def test(**kwargs):
-    print(list(kwargs.values()))
-        
-    for key, value in kwargs.items():
-        print(key, value)
-    
-
-test(auto=True, énergie=False)
-
-print(np.array([1,2,4]))
+a = np.array([1,2,3])
+print(type(a))
+print(math.comb(10, 2))
+print(const)

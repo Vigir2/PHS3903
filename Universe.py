@@ -13,7 +13,7 @@ import time
 
 class Universe:
     """Univers de simulation"""
-    def __init__(self, name: str = None, N: int = None, a: float = None, T: float = None, dim: int = 3, input_state: np.ndarray = None):
+    def __init__(self, name: str = None, N: int = None, a: float = None, T: float = None, dim: int = 3, input_state: np.ndarray = None) -> None:
         """
         Crée un univers de simulation
 
@@ -48,7 +48,7 @@ class Universe:
             self.dim = dim
             self.N = N
             self.T = T
-            self.water_molecules = [H2O(dim=self.dim, T=T) for i in range(N)]
+            self.water_molecules = [H2O(dim=self.dim, T=T) for _ in range(N)]
             # Gives random positions to molecules in the simulation box ensuring a security distance between each molecule
             for m in self.water_molecules:
                 n = 0
@@ -70,10 +70,10 @@ class Universe:
         self.pressure = self.pression()
         print(log.init_universe.format(name = self.name, N = self.N, T = self.temp, P = self.pressure * pc.uÅfs_to_bar), end="\n\n")
 
-    def __getitem__(self, index):
+    def __getitem__(self, index) -> H2O:
         return self.water_molecules[index]
 
-    def temperature(self, *args):
+    def temperature(self, *args: str) -> float:
         """
         Calcul la température du système à partir de son énergie cinétique moyenne
         
@@ -86,19 +86,24 @@ class Universe:
         ------
         - temperature (float): Température du système [K]
         """
-        K = 0
+        if len(args) > 2:
+            print(log.error_temperature.format(a = args))
+            sys.exit()
+        f = {3: {'t': 3, 'r': 3}, 2: {'t': 2, 'r': 1}}
         arg = [m.lower() for m in args]
-        if ("t" in arg) ^ ("r" in arg):
-            for m in self.water_molecules:
-                K += m.kinetic_energy(args)
-            return 2 * K / (3 * self.N * pc.kb)
-        if ("t" in arg) and ("r" in arg):
-            for m in self.water_molecules:
-                K += m.kinetic_energy(args)
-                T = K / (3 * self.N * pc.kb)
-            return T
+        Nf = 0
+        N_correction = 0
+        for key in arg:
+            Nf += f[self.dim][key]
+            if key == 't':
+                N_correction = f[self.dim]['t']
+        K = 0
+        for m in self.water_molecules:
+            K += m.kinetic_energy(args)
+        return 2 * K / ((Nf * self.N - N_correction) * pc.kb)
+
     
-    def pression(self, K: float = None):
+    def pression(self, K: float = None) -> float:
         """
         Calcule la pression du système en u / (Å * fs^2)
         
@@ -125,27 +130,27 @@ class Universe:
             P = 1/(3*self.a**3) * (2 * K + v)
             return P
 
-    def cm_position(self):
+    def cm_position(self) -> np.ndarray:
         """Retourne la position du centre de masse du système en Å"""
         r = 0
         for m in self.water_molecules:
             r += m.cm_pos()
         return r / self.N
     
-    def system_momentum(self):
+    def system_momentum(self) -> np.ndarray:
         """Retourne lq quantité de mouvement globale du système en u*Å/fs"""
         p = 0
         for m in self.water_molecules:
             p += h2O.M * m.cm_vel
         return p
     
-    def __remove_net_momentum(self):
+    def __remove_net_momentum(self) -> None:
         """Ajuste les vitesses des molécules du système pour avoir une quantité de mouvement totale nulle"""
         sys_cm_vel = self.system_momentum() / (self.N * h2O.M)
         for m in self.water_molecules:
             m.cm_vel -= sys_cm_vel
     
-    def snapshot(self):
+    def snapshot(self) -> None:
         """Enregistre la position actuelle des molécules du système afin d'obtenir une trajectoire"""
         snap = np.zeros((1, self.N, 3, self.dim))
         for i in range(self.N):
@@ -156,43 +161,35 @@ class Universe:
         else:
             self.trajectories = snap
     
-    def __write_trajectories(self, dt: float, delta: float, format: str, a: np.ndarray):
+    def __write_trajectories(self, dt: float, delta: float, a: np.ndarray, format: str = "vtf") -> None:
         """
-        Écrit la trajectoire des molécules du système dans un fichier .xyz
-        """
+        Écrit la trajectoire des molécules du système dans un fichier .xyz ou .vtf"""
         out_func.write_trajectory(self.trajectories, fname=paths.traj_fname(name=self.name, format=format), dt=dt, a=a, delta=delta, format=format)
    
-    def __write_xyz(self):
+    def __write_xyz(self) -> None:
         """Enregistre la configuration actuelle du système dans un fichier .xyz"""
-        self.correct_position()
         out_func.write_xyz_file(self.water_molecules, fname=paths.config_fname(name=self.name))
 
-    def __save_state_log(self):
-        """Enregistre l'état actuel du système dans un format pouvant être lu pour initier une nouvelle simulation"""
-        out = np.zeros((self.N, 6, self.dim))
-        for i in range(self.N):
-            self.water_molecules[i].correct_cm_pos(a = self.a)
-            out[i][0] = self.water_molecules[i].O_pos
-            out[i][1] = self.water_molecules[i].H1_pos
-            out[i][2] = self.water_molecules[i].H2_pos
-            out[i][3] = self.water_molecules[i].M_pos
-            out[i][4] = self.water_molecules[i].cm_vel
-            out[i][5] = self.water_molecules[i].rot_vel
-        out_func.write_state_log(out, paths.state_log_fname(self.name))
+    def __save_state_log(self) -> None:
+        """Enregistre l'état actuel du système dans un format pouvant être lu pour initialiser une nouvelle simulation"""
+        out_func.write_state_log(self.water_molecules, paths.state_log_fname(self.name))
 
-    def __save_state_variables(self, data: dict):
+    def __save_state_variables(self, data: dict) -> None:
         """Enregistre les variables d'états du système en fonction du temps"""
         out_func.write_state_variables(data=data, name=self.name)
 
-    def compute_forces(self):
+    def compute_forces(self, Ewald: bool = False) -> None:
         """Calcule les forces du système, l'énergie potentielle et le virriel"""
-
         if simP.rc <= self.a/2:
-            integ.compute_forces(U=self, rc=simP.rc, a=self.a)
+            rc = self.a/2
         else:
-            integ.compute_forces(U=self, rc=self.a/2, a=self.a)
+            rc = simP.rc
+        if Ewald == False:
+            integ.compute_forces(U=self, rc=rc, a=self.a)
+        else:
+            pass
     
-    def energy(self):
+    def energy(self) -> float:
         """Retourne l'énergie totale du système en [uÅ^2/fs^2]"""
         K = 0
         for m in self.water_molecules:
@@ -201,12 +198,12 @@ class Universe:
         self.total_energy = K+V, K, V
         return K+V, K, V
 
-    def correct_position(self):
+    def correct_position(self) -> None:
         """Ajuste la position des molécules pour qu'elles soient dans la cellule de simulation"""
         for m in self.water_molecules:
             m.correct_cm_pos(a = self.a)
     
-    def nve_integration(self, dt: float, n: int, delta: int = 1, *args):
+    def nve_integration(self, dt: float, n: int, delta: int = 1, *args: str) -> None:
         """
         Effectue une intégration des équation du mouvement pour un ensemble NVE avec un algorithme de Verlet vitesse
 
@@ -230,8 +227,8 @@ class Universe:
             P = True
             data["P"] = []
         for i in range(int(n)):
-            print(f"n = {i}")
-            print(self.energy(), end="\n\n")
+            print(f"n = {i}, t = {i * dt} fs")
+            print(np.array(self.energy()) / self.N * pc.uÅfs_to_KJ_mol, end="\n\n")
             if i%delta == 0:
                 self.snapshot()
                 if E:
@@ -242,12 +239,13 @@ class Universe:
                     data["P"].append(self.pression())
             integ.nve_verlet_run(U=self, dt=dt)
             self.correct_position()
+            self.__remove_net_momentum()
         data['t'] = np.arange(0, n*dt, delta)
         self.__write_trajectories(dt=dt, delta=delta, format="vtf", a=self.a)
         self.__save_state_variables(data=data)
         self.__save_state_log()
     
-    def npt_integration(self, dt: float, n: int, delta: int, T0: float, P0: float, *args):
+    def npt_integration(self, dt: float, n: int, delta: int, T0: float, P0: float, *args: str) -> None:
         """
         Effectue une intégration des équations du mouvement pour un ensemble NPT avec un algorithme de Verlet vitesse
         
@@ -305,12 +303,13 @@ class Universe:
                     data["V"].append(self.a**3)
             integ.npt_verlet_run(U=self, dt=dt, T0=T0, P0=P0, Nf=Nf(self.dim))
             self.correct_position()
+            self.__remove_net_momentum()
         data['t'] = np.arange(0, n*dt, delta)
         self.__write_trajectories(dt=dt, delta=delta, a=a, format="vtf")
         self.__save_state_log()
         self.__save_state_variables(data=data)
     
-    def ewald_nve_integration(self, n, delta, dt):
+"""     def ewald_nve_integration(self, n, delta, dt):
         E = pc.kb * self.T
         #print("E = ", E)
         delta1, delta2 = simP.delta1, simP.delta2
@@ -336,16 +335,16 @@ class Universe:
                 self.snapshot()
                 integ.nve_verlet_run(self, dt, True, simP.rc, alpha, umax, vmax, lambmax, rbasis, ewald_correction)
             U.correct_position()
-        self.__write_trajectories(dt=dt, delta=delta, format="vtf", a=self.a)
+        self.__write_trajectories(dt=dt, delta=delta, format="vtf", a=self.a) """
 
 
 
 if __name__ == "__main__":
     U = Universe(name = simP.name, N = simP.N, T = simP.T, a = simP.a, dim=simP.dim)
-    U.npt_integration(1, 4000, 1, 150, 1, "V", "P", "T")
+    #U.npt_integration(1, 4000, 1, 150, 1, "V", "P", "T")
     #U._Universe__write_xyz()
     #U = Universe(name="test_glace", input_state="Output\Test_integration_5000\state_log\Test_integration_5000.npy")
-    #U.nve_integration(dt=1, n=150, delta=1)
+    U.nve_integration(dt=1, n=12, delta=1)
     #U = Universe()
     #U = Universe("testvtf", a=simP.a, N=simP.N, T=simP.T, dim=3)
     #print(U.pression())
