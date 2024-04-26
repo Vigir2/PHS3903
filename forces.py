@@ -32,20 +32,25 @@ def coulomb_force(r: float, q1: float, q2: float) -> float:
     return out
 
 def ewald_electrostatic(r, alpha, q1, q2):
-    out = 1 / (4 * np.pi * pc.epsilon0) * q1 * q2 / r * math.erfc(alpha * r)
+    """Retourne le potentiel électrostatique pour la sommation d'Ewald dans l'espace réel"""
+    out = 1 / (4 * np.pi * pc.epsilon0) * (q1 * q2 / r) * math.erfc(alpha * r)
     return out
 
-def ewald_electrostatic_correction(r, alpha, q1, q2):
-    out = 1 / (4 * np.pi * pc.epsilon0) * q1 * q2 / r * math.erf(alpha * r)
+def ewald_electrostatic_correction(r: float, alpha: float, q1: float, q2: float):
+    """Retourne la correction de rigidité de l'interraction par sommation d'Ewald"""
+    out = 1 / (4 * np.pi * pc.epsilon0) * (q1 * q2 / r) * math.erf(alpha * r)
     return out
 
 def ewald_electrostatic_force(r, alpha, q1, q2):
+    """Retourne la force électrostatique pour la sommation d'Ewald dans l'espace réel"""
     out = (q1 * q2) / (4 * np.pi * pc.epsilon0 * r**2) * (math.erfc(alpha*r)/r + 2*alpha/np.sqrt(np.pi) * np.exp(-alpha**2 * r**2))
     return out
 
-def ewald_electrostatic_force_correction(r, alpha, q1, q2):
+def ewald_electrostatic_force_correction(r: float, alpha: float, q1: float, q2: float):
+    """Retourne la force associé au potentiel de correction pour la rigidité dans la sommation d'Ewald dans l'espace réel"""
     out = (q1 * q2) / (4 * np.pi * pc.epsilon0 * r**2) * (math.erf(alpha * r)/r - 2*alpha/np.sqrt(np.pi) * np.exp(-alpha**2 * r**2))
     return out
+
     
 if __name__ == "__main__":
     pass

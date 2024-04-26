@@ -1,6 +1,7 @@
 import numpy as np
 from H2O import H2O
 import output_functions as out_func
+import init_functions as init_func
 import sys
 import parameters.paths as paths
 import parameters.physical_constants as pc
@@ -67,13 +68,31 @@ class Universe:
                     self.cm = np.array([m.cm_pos()])
             delattr(self, "cm")
         self.__remove_net_momentum()
-        self.compute_forces()
+        self.compute_forces(Ewald=False)
         self.temp = self.temperature("T", "R")
         self.pressure = self.pression()
         print(log.init_universe.format(name = self.name, N = self.N, T = self.temp, P = self.pressure * pc.uÅfs_to_bar), end="\n\n")
 
     def __getitem__(self, index) -> H2O:
         return self.water_molecules[index]
+    
+    def get_state(self) -> tuple:
+        """
+        Retourne l'état actuel du système
+        
+        Output
+        -----
+        - state (np.ndarray): État du système
+        """
+        out = np.zeros((U.N, 6, U.dim))
+        for i in range(self.N):
+            out[i][0] = self.water_molecules[i].O_pos
+            out[i][1] = self.water_molecules[i].H1_pos
+            out[i][2] = self.water_molecules[i].H2_pos
+            out[i][3] = self.water_molecules[i].M_pos
+            out[i][4] = self.water_molecules[i].cm_vel
+            out[i][5] = self.water_molecules[i].rot_vel
+        return out, self.a
 
     def temperature(self, *args: str) -> float:
         """
@@ -162,25 +181,8 @@ class Universe:
             self.trajectories = np.append(self.trajectories, snap, axis=0)
         else:
             self.trajectories = snap
-    
-    def __write_trajectories(self, dt: float, delta: float, a: np.ndarray, format: str = "vtf") -> None:
-        """
-        Écrit la trajectoire des molécules du système dans un fichier .xyz ou .vtf"""
-        out_func.write_trajectory(self.trajectories, fname=paths.traj_fname(name=self.name, format=format), dt=dt, a=a, delta=delta, format=format)
-   
-    def __write_xyz(self) -> None:
-        """Enregistre la configuration actuelle du système dans un fichier .xyz"""
-        out_func.write_xyz_file(self.water_molecules, fname=paths.config_fname(name=self.name))
 
-    def __save_state_log(self) -> None:
-        """Enregistre l'état actuel du système dans un format pouvant être lu pour initialiser une nouvelle simulation"""
-        out_func.write_state_log(self.water_molecules, paths.state_log_fname(self.name))
-
-    def __save_state_variables(self, data: dict) -> None:
-        """Enregistre les variables d'états du système en fonction du temps"""
-        out_func.write_state_variables(data=data, name=self.name)
-
-    def compute_forces(self, Ewald: bool = False) -> None:
+    def compute_forces(self, Ewald: bool = False, parallel: bool = False) -> None:
         """Calcule les forces du système, l'énergie potentielle et le virriel"""
         if simP.rc <= self.a/2:
             rc = self.a/2
@@ -189,7 +191,8 @@ class Universe:
         if Ewald == False:
             integ.compute_forces(U=self, rc=rc, a=self.a)
         else:
-            pass
+            alpha, c_max, rbasis = init_func.ewald_parameters(rc=rc, a=simP.a, N=self.N)
+            integ.compute_forces_ewald(U=self, rc=rc, a=self.a, alpha=alpha, c_max=c_max, rbasis=rbasis, parallel=parallel)
     
     def energy(self) -> float:
         """Retourne l'énergie totale du système en [uÅ^2/fs^2]"""
@@ -205,7 +208,7 @@ class Universe:
         for m in self.water_molecules:
             m.correct_cm_pos(a = self.a)
     
-    def nve_integration(self, dt: float, n: int, delta: int = 1, graphs: bool = True, **kwargs: bool) -> None:
+    def nve_integration(self, dt: float, n: int, delta: int = 1, Ewald: bool = False, parallel: bool = False, graphs: bool = True, **kwargs: bool) -> None:
         """
         Effectue une intégration des équation du mouvement pour un ensemble NVE avec un algorithme de Verlet vitesse
 
@@ -214,10 +217,13 @@ class Universe:
         - dt (float): Pas de temps utilisé pour l'intégration [fs]
         - n (int): Nombre de pas
         - delta (int): Intervalles de pas de temps auxquels les cordonnées sont enregistrées
+        - Ewald (bool): Utilise la méthode de la sommation d'Ewald pour le calcul des interractions électrostatiques
         - graphs (bool): Trace en temps réel les variables thermodynamiques sélectionnées
         - E, T, P (bool): Quantités à mesurées pendant l'intégration
         """
         print(log.nve_initiation.format(time=(dt*n/1000), n=n), end="\n\n")
+        if Ewald:
+            self.ewald_correction = 1/(4*np.pi**(3/2)*pc.epsilon0) * self.N * (2*h2O.q**2 + (2*h2O.q)**2)
         data = dict()
         
         if "E" in kwargs:
@@ -232,20 +238,22 @@ class Universe:
 
         if graphs:
             data_length = len(data)
-            units = {"E": r"(KJ mol$^{{-1}}$)", "T": "(K)", "P": "bar"}
+            units = {"E": r"KJ mol$^{{-1}}$", "T": "K", "P": "bar"}
             plt.ion()
             fig, axes = plt.subplots(data_length, 1, sharex=True)
             for index, value in enumerate(data):
                 axes[index].set_title(value)
                 axes[index].plot([],[])
-                axes[index].set_ylabel(units[value])
-                axes[index].axhline(y = 0, linestyle='--', color = 'k')
+                axes[index].set_ylabel(f"{value}  ({units[value]})")
+                axes[index].axhline(y = 0, linestyle='--', color = 'k', linewidth=0.5)
             axes[-1].set_xlabel("t (fs)")
-            plt.subplots_adjust(hspace=0.4)
+            plt.subplots_adjust(hspace=0.5)
 
+        tic = time.time()
         for i in range(int(n)):
             print(f"n = {i}, t = {i * dt} fs")
             print(np.array(self.energy()) / self.N * pc.uÅfs_to_KJ_mol, end="\n\n")
+
             if i%delta == 0:
                 self.snapshot()
                 if "E" in data:
@@ -260,22 +268,24 @@ class Universe:
                         axes[index].lines[0].set_xdata(np.arange(0, i + 1, delta))
                         axes[index].lines[1].remove()
                         axes[index].axhline(y = np.mean(data[key]), linestyle='--', color='k')
-                        axes[index].set_title(f"{key}, {np.mean(data[key]):.3f}")
+                        axes[index].set_title(f"{np.mean(data[key]):.3f} {units[key]}")
                         axes[index].relim()
                         axes[index].autoscale_view()
                     fig.canvas.draw()
                     fig.canvas.flush_events()
-                    time.sleep(0.1)
+                    time.sleep(0.05)
 
-            integ.nve_verlet_run(U=self, dt=dt)
+            integ.nve_verlet_run(U=self, dt=dt, Ewald=Ewald, parallel=parallel)
             self.correct_position()
             self.__remove_net_momentum()
+        toc = time.time()
+        print(log.simulation_completed.format(time=(toc-tic)/3600))
         data['t'] = np.arange(0, n*dt, delta)
         self.__write_trajectories(dt=dt, delta=delta, format="vtf", a=self.a)
         self.__save_state_variables(data=data)
         self.__save_state_log()
     
-    def npt_integration(self, dt: float, n: int, delta: int, T0: float, P0: float, graphs: bool = True, **kwargs: str) -> None:
+    def npt_integration(self, dt: float, n: int, delta: int, T0: float, P0: float, Ewald: bool = False, graphs: bool = True, **kwargs: str) -> None:
         """
         Effectue une intégration des équations du mouvement pour un ensemble NPT avec un algorithme de Verlet vitesse
         
@@ -286,10 +296,13 @@ class Universe:
         - delta (int): Intervalles de pas de temps auxquels les cordonnées sont enregistrées
         - T0 (float): Température cible [K]
         - P0 (float): Pression cible [bar]
+        - Ewald (bool): Utilise la méthode de sommation d'Ewald pour le calcul des interractions électrostatiques
         - graphs (bool): Trace en temps réel les variables thermodynamiques sélectionnées
         - E, H, T, P, V (bool): Quantités à mesurées pendant l'intégration
         """
         print(log.npt_initiation.format(time=(dt*n/1000), n=n, T = T0, P = P0))
+        if Ewald:
+            self.ewald_correction = 1/(4*np.pi**(3/2)*pc.epsilon0) * self.N * (2*h2O.q**2 + (2*h2O.q)**2)
         P0 *= pc.bar_to_uÅfs
         data = dict()
         a = []
@@ -311,18 +324,19 @@ class Universe:
         
         if graphs:
             data_length = len(data)
-            units = {"E": r"(KJ mol$^{{-1}}$)", "T": "(K)", "P": "bar", "V": r"Å$^3$", "H": r"(KJ mol$^{{-1}}$)"}
+            units = {"E": r"KJ mol$^{{-1}}$", "T": "K", "P": "bar", "V": r"Å$^3$", "H": r"KJ mol$^{{-1}}$"}
             plt.ion()
             fig, axes = plt.subplots(data_length, 1, sharex=True)
             for index, value in enumerate(data):
                 axes[index].set_title(value)
                 axes[index].plot([],[])
-                axes[index].set_ylabel(units[value])
-                axes[index].axhline(y = 0, linestyle='--', color = 'k')
+                axes[index].set_ylabel(f"{value}  ({units[value]})")
+                axes[index].axhline(y = 0, linestyle='--', color = 'k', linewidth=0.5)
             axes[-1].set_xlabel("t (fs)")
-            plt.subplots_adjust(hspace=0.4)
+            plt.subplots_adjust(hspace=0.5)
 
-        Nf = lambda dim: 6 if dim == 3 else 3
+        Nf = lambda dim: 6 * U.N - 3 if dim == 3 else 3 * U.N - 2
+        tic = time.time()
         for i in range(int(n)):
             print(f"n = {i}, t = {i * dt} fs")
             print(f"a = {self.a}")
@@ -332,7 +346,7 @@ class Universe:
                 self.snapshot()
                 a.append(self.a)
                 if "E" in data:
-                    data["E"].append(self.energy() / self.N * pc.uÅfs_to_KJ_mol)
+                    data["E"].append(self.energy()[0] / self.N * pc.uÅfs_to_KJ_mol)
                 if "T" in data:
                     data["T"].append(self.temp)
                 if "P" in data:
@@ -341,7 +355,7 @@ class Universe:
                     if "E" in data:
                         data["H"].append(data["E"][-1] + (self.pressure * self.a**3) / self.N * pc.uÅfs_to_KJ_mol)
                     else:
-                        data["H"].append((self.energy() + self.pressure * self.a**3) / self.N * pc.uÅfs_to_KJ_mol)
+                        data["H"].append((self.energy()[0] + self.pressure * self.a**3) / self.N * pc.uÅfs_to_KJ_mol)
                 if "V" in data:
                     data["V"].append(self.a**3)
                 if graphs:
@@ -350,54 +364,141 @@ class Universe:
                         axes[index].lines[0].set_xdata(np.arange(0, i + 1, delta))
                         axes[index].lines[1].remove()
                         axes[index].axhline(y = np.mean(data[key]), linestyle='--', color='k')
-                        axes[index].set_title(f"{key}, {np.mean(data[key]):.3f}")
+                        axes[index].set_title(f"{np.mean(data[key]):.3f} {units[key]}")
                         axes[index].relim()
                         axes[index].autoscale_view()
                     fig.canvas.draw()
                     fig.canvas.flush_events()
-                    time.sleep(0.1)
-            integ.npt_verlet_run(U=self, dt=dt, T0=T0, P0=P0, Nf=Nf(self.dim))
+                    time.sleep(0.05)
+            integ.npt_verlet_run(U=self, dt=dt, T0=T0, P0=P0, Nf=Nf(self.dim), Ewald=Ewald)
             self.correct_position()
             self.__remove_net_momentum()
+        toc = time.time()
+        print(log.simulation_completed.format(time=(toc-tic)/3600))
         data['t'] = np.arange(0, n*dt, delta)
         self.__write_trajectories(dt=dt, delta=delta, a=a, format="vtf")
         self.__save_state_log()
         self.__save_state_variables(data=data)
     
-"""     def ewald_nve_integration(self, n, delta, dt):
-        E = pc.kb * self.T
-        #print("E = ", E)
-        delta1, delta2 = simP.delta1, simP.delta2
-        delta1 *= E
-        delta2 *= E
-        alpha = 1/simP.rc * np.sqrt(-np.log((4 * np.pi * pc.epsilon0 * simP.rc * delta1)/(2*h2O.q)**2)) #[Å^-1]
-        Smax = (self.N * 4 * h2O.q)**2 #[e^2]
-        V = self.a**3
-        kmax2 = -4 * alpha**2 * np.log((2*pc.epsilon0 * V * delta2)/Smax) #[Å^-2]
-        u = 2 * np.pi * simP.b1 / self.a
-        v = 2 * np.pi * simP.b2 / self.a
-        w = 2 * np.pi * simP.b3 / self.a
-        rbasis = np.array([u, v, w])
-        umax = int(np.ceil(np.sqrt(kmax2/np.dot(u,u))))
-        vmax = int(np.ceil(np.sqrt(kmax2/np.dot(v,v))))
-        lambmax = int(np.ceil(np.sqrt(kmax2/np.dot(w,w))))
-        ewald_correction = alpha / (4 * np.pi**(3/2) * pc.epsilon0) * self.N * 6 * h2O.q**2
-        integ.compute_forces_ewald(self, simP.rc, self.a, alpha, umax, vmax, lambmax, rbasis, ewald_correction)
+    def nvt_integration(self, dt: float, n: int, delta: int, T0: float, Ewald: bool = False, graphs: bool = True, **kwargs: str) -> None:
+        """
+        Effectue une intégration des équations du mouvement pour un ensemble NPT avec un algorithme de Verlet vitesse
+        
+        Input
+        -----
+        - dt (float): Pas de temps utilisé pour l'intégration [fs]
+        - n (int): Nombre de pas
+        - delta (int): Intervalles de pas de temps auxquels les cordonnées sont enregistrées
+        - T0 (float): Température cible [K]
+        - P0 (float): Pression cible [bar]
+        - Ewald (bool): Utilise la méthode de sommation d'Ewald pour le calcul des interractions électrostatiques
+        - graphs (bool): Trace en temps réel les variables thermodynamiques sélectionnées
+        - E, H, T, P, V (bool): Quantités à mesurées pendant l'intégration
+        """
+        print(log.nvt_initiation.format(time=(dt*n/1000), n=n, T = T0))
+        if Ewald:
+            self.ewald_correction = 1/(4*np.pi**(3/2)*pc.epsilon0) * self.N * (2*h2O.q**2 + (2*h2O.q)**2)
+        data = dict()
+        a = []
+        if "E" in kwargs:
+            if kwargs["E"]:
+                data["E"] = []
+        if "T" in kwargs:
+            if kwargs["T"]:
+                data["T"] = []
+        if "P" in kwargs:
+            if kwargs["P"]:
+                data["P"] = []
+        if "H" in kwargs:
+            if kwargs["H"]:
+                data["H"] = []
+        if "V" in kwargs:
+            if kwargs["V"]:
+                data["V"] = []
+        
+        if graphs:
+            data_length = len(data)
+            units = {"E": r"KJ mol$^{{-1}}$", "T": "K", "P": "bar", "V": r"Å$^3$", "H": r"KJ mol$^{{-1}}$"}
+            plt.ion()
+            fig, axes = plt.subplots(data_length, 1, sharex=True)
+            for index, value in enumerate(data):
+                axes[index].set_title(value)
+                axes[index].plot([],[])
+                axes[index].set_ylabel(f"{value}  ({units[value]})")
+                axes[index].axhline(y = 0, linestyle='--', color = 'k', linewidth=0.5)
+            axes[-1].set_xlabel("t (fs)")
+            plt.subplots_adjust(hspace=0.5)
+
+        Nf = lambda dim: 6 * U.N - 3 if dim == 3 else 3 * U.N - 2
+        tic = time.time()
         for i in range(int(n)):
-            print(f"n = {i}")
-            print(self.energy(), end="\n\n")
+            print(f"n = {i}, t = {i * dt} fs")
+            print(f"T = {self.temp} K")
             if i%delta == 0:
                 self.snapshot()
-                integ.nve_verlet_run(self, dt, True, simP.rc, alpha, umax, vmax, lambmax, rbasis, ewald_correction)
-            U.correct_position()
-        self.__write_trajectories(dt=dt, delta=delta, format="vtf", a=self.a) """
+                a.append(self.a)
+                if "E" in data:
+                    data["E"].append(self.energy()[0] / self.N * pc.uÅfs_to_KJ_mol)
+                if "T" in data:
+                    data["T"].append(self.temp)
+                if "P" in data:
+                    data["P"].append(self.pression() * pc.uÅfs_to_bar)
+                if "H" in data:
+                    if "E" in data:
+                        data["H"].append(data["E"][-1] + (self.pression() * self.a**3) / self.N * pc.uÅfs_to_KJ_mol)
+                    else:
+                        data["H"].append((self.energy()[0] + self.pression() * self.a**3) / self.N * pc.uÅfs_to_KJ_mol)
+                if "V" in data:
+                    data["V"].append(self.a**3)
+                if graphs:
+                    for index, key in enumerate(data):
+                        axes[index].lines[0].set_ydata(data[key])
+                        axes[index].lines[0].set_xdata(np.arange(0, i + 1, delta))
+                        axes[index].lines[1].remove()
+                        axes[index].axhline(y = np.mean(data[key]), linestyle='--', color='k')
+                        axes[index].set_title(f"{np.mean(data[key]):.3f} {units[key]}")
+                        axes[index].relim()
+                        axes[index].autoscale_view()
+                    fig.canvas.draw()
+                    fig.canvas.flush_events()
+                    time.sleep(0.05)
+            integ.nvt_verlet_run(U=self, dt=dt, T0=T0, Nf=Nf(self.dim), Ewald=Ewald)
+            self.correct_position()
+            self.__remove_net_momentum()
+        toc = time.time()
+        print(log.simulation_completed.format(time=(toc-tic)/3600))
+        data['t'] = np.arange(0, n*dt, delta)
+        self.__write_trajectories(dt=dt, delta=delta, a=a, format="vtf")
+        self.__save_state_log()
+        self.__save_state_variables(data=data)
+    
+    def __write_trajectories(self, dt: float, delta: float, a: np.ndarray, format: str = "vtf") -> None:
+        """
+        Écrit la trajectoire des molécules du système dans un fichier .xyz ou .vtf"""
+        out_func.write_trajectory(self.trajectories, fname=paths.traj_fname(name=self.name, format=format), dt=dt, a=a, delta=delta, format=format)
+   
+    def __write_xyz(self) -> None:
+        """Enregistre la configuration actuelle du système dans un fichier .xyz"""
+        out_func.write_xyz_file(self.water_molecules, fname=paths.config_fname(name=self.name))
+
+    def __save_state_log(self) -> None:
+        """Enregistre l'état actuel du système dans un format pouvant être lu pour initialiser une nouvelle simulation"""
+        out_func.write_state_log(self.water_molecules, paths.state_log_fname(self.name))
+
+    def __save_state_variables(self, data: dict) -> None:
+        """Enregistre les variables d'états du système en fonction du temps"""
+        out_func.write_state_variables(data=data, name=self.name)
 
 
 
 if __name__ == "__main__":
     U = Universe(name = simP.name, N = simP.N, T = simP.T, a = simP.a, dim=simP.dim)
-    #U.npt_integration(dt = 1, n = 50, delta = 1, T0 = 300, P0 = 10, graphs=True, T=True, P=True, V=True)
-    U.nve_integration(dt=1, n=150, delta=1, graphs=True, E=True, P=True, T=True)
+    #U.nve_integration(dt=1, n=50, delta=1, Ewald=True, parallel=True, graphs=True, E=True, T = True, P = True)
+    #x = input()
+    #U.nve_integration(dt=1, n=50, delta=1, Ewald=True, parallel=False, graphs=True, E=True, T = True, P = True)
+    #U = Universe(name="glace_formation", a=14.87832291048, input_state="Output\\test_ewald\\state_log\\test_ewald.npy")
+    #U.npt_integration(dt = 1, n = 2000, delta = 1, T0 = 200, P0 = 15, graphs=True, T=True, P=True, V=True, E=True, Ewald=True)
+    #U.nve_integration(dt=1, n=2, delta=1, graphs=False, E=False, P=False, T=False)
     #U.npt_integration(1, 4000, 1, 150, 1, "V", "P", "T")
     #U._Universe__write_xyz()
     #U = Universe(name="test_glace", input_state="Output\Test_integration_5000\state_log\Test_integration_5000.npy")
@@ -412,5 +513,16 @@ if __name__ == "__main__":
     #U.npt_integration(dt = 1, n = 10, delta = 1, T0 = 200, P0 = 1)
     #U.ewald_npt_integration(100, 0.000001, 0.000001)
     #integ.compute_forces(U, rc=simP.rc, a=U.a)
+    # U.ewald_correction = 1/(4*np.pi**(3/2)*pc.epsilon0) * U.N * (2*h2O.q**2 + (2*h2O.q)**2)
+    # U.compute_forces(Ewald=True, parallel=True)
+    # print(U.energy())
+    # U.compute_forces(Ewald=True, parallel=False)
+    # print(U.energy())
+    # U.compute_forces(Ewald=True, parallel=True)
+    # print(U.energy())
+    # U.compute_forces(Ewald=True, parallel=False)
+    # print(U.energy())
+    # U.compute_forces(Ewald=True)
+    # print(U.energy())
 
 

@@ -1,7 +1,6 @@
 import numpy as np
 import init_functions as init_func
 import parameters.h2O_model as h2O
-import parameters.simulation_parameters as simP
 from scipy.stats import special_ortho_group
 
 class H2O:

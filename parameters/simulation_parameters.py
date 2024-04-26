@@ -1,13 +1,13 @@
 import numpy as np
 import parameters.physical_constants as pc
 
-name = "test_pression"
-N = 125
+name = "test_parallele"
+N = 100
 dim = 3
 
 
-a = 28 #[Ang]
-rc = 12
+a = 18 #[Ang]
+rc = 10
 
 # Basis vectors
 b1 = np.array([1, 0, 0])
@@ -21,7 +21,7 @@ C = a*b3
 # Initial conditions
 ##########################################
 
-security_distance = 2.5 #[Ang]
+security_distance = 2.7 #[Ang]
 
 
 # Thermodynamical properties
@@ -30,13 +30,13 @@ security_distance = 2.5 #[Ang]
 T = 300 #[K]
 P = 10   #[bar]
 
-tau_p = 10000
-tau_t = 500
+tau_p = 2000
+tau_t = 800
 
 
 # Ewald parameters
 ########################################
 
-delta1 = 0.001
+delta1 = 0.01
 delta2 = 0.01
 

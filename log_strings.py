@@ -15,4 +15,8 @@ nve_initiation = "NVE velocity Verlet scheme initiated for {time} ps with {n} it
 
 npt_initiation = "NPT velocity Verlet scheme initiated for {time} ps with {n} iterations. Temperature and pressure targets are {T:.2f} K and {P:.2f} bar."
 
+nvt_initiation = "NVT velocity Verlet scheme initiated for {time} ps with {n} iterations. Temperature target is {T:.2f} K."
+
 error_temperature = "An error occured while computing system temperature:\nToo many arguments provided : {a}"
+
+simulation_completed = "The simulation was successfully completed in {time:.4f} hours"

@@ -37,4 +37,3 @@ epsilon0 = epsilon0_SI * ureg("F/m").to("e^2 * fs^2 / u / angstrom^3").magnitude
 k = 1/(4 * np.pi * epsilon0) #[u * Å^3 / (fs^2 * e^2)]
 
 kb = kb_SI * ureg("J/K").to("amu*angstrom^2/fs^2/K").magnitude #[u * Å^2 / fs^2 / K]
-
