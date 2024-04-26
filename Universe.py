@@ -493,11 +493,12 @@ class Universe:
 
 if __name__ == "__main__":
     U = Universe(name = simP.name, N = simP.N, T = simP.T, a = simP.a, dim=simP.dim)
+
     #U.nve_integration(dt=1, n=50, delta=1, Ewald=True, parallel=True, graphs=True, E=True, T = True, P = True)
     #x = input()
     #U.nve_integration(dt=1, n=50, delta=1, Ewald=True, parallel=False, graphs=True, E=True, T = True, P = True)
     #U = Universe(name="glace_formation", a=14.87832291048, input_state="Output\\test_ewald\\state_log\\test_ewald.npy")
-    #U.npt_integration(dt = 1, n = 2000, delta = 1, T0 = 200, P0 = 15, graphs=True, T=True, P=True, V=True, E=True, Ewald=True)
+    U.npt_integration(dt = 1, n = 5000, delta = 1, T0 = 300, P0 = 5, graphs=False, T=True, P=True, V=True, E=True, Ewald=True)
     #U.nve_integration(dt=1, n=2, delta=1, graphs=False, E=False, P=False, T=False)
     #U.npt_integration(1, 4000, 1, 150, 1, "V", "P", "T")
     #U._Universe__write_xyz()
