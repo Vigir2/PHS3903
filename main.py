@@ -1,40 +1,54 @@
 import numpy as np
-import parameters.h2O_model as h2O
-from pint import UnitRegistry
-from H2O import H2O
-import multiprocessing
-ureg = UnitRegistry()
+from Universe import Universe
+import parameters.simulation_parameters as simP
+from itertools import repeat
+from multiprocessing import Pool
+import shutil
+import os
+import time
 
-def do_something(m: H2O):
-    m.O_force = 69
-    m.H1_force = 42
-    return m
-    #print(m.inertia_tensor())
+def generate_equilibrium_state(name: str = None, N: int = None, T: float = None, P: float = None, a: float = None, n: int = 8000) -> tuple:
+    name_eq = name + f"_equilibrium_T{T}_P{P}"
+    U = Universe(name=name_eq, N=N, a=a, T=T)
+    U.npt_integration(dt=1.2, n=n, delta=2, T0=T, P0=P, Ewald=True, graphs=True, T=True, P=True, V=True)
+    shutil.move(os.path.join("Output", name_eq), os.path.join("Output", name, "EQ"))
+    out_state, a = U.get_state()
+    return out_state, a
+
+
+def enthalpie_measurement(T: float, name: str, input_state: np.ndarray, a: float, P: float, n_npt: int = 4000, n_nvt: int = 3000) -> float:
+    name_npt = name + f"_npt_T{T}_P{P}"
+    U = Universe(name=name_npt, a=a, input_state=input_state)
+    data = U.npt_integration(dt=1, n=n_npt, delta=2, T0=T, P0=P, Ewald=True, H=True, P=True, T=True, V=True, E=True)
+    shutil.move(os.path.join("Output", name_npt), os.path.join("Output", name, "NPT"))
+    a = np.mean(data["V"][int(n_npt/2):])**(1/3)
+    input_state = U.get_state()[0]
+    name_nvt = name + f"_nvt_T{T}_P{P}"
+    U = Universe(name=name_nvt, a=a, input_state=input_state)
+    data = U.nvt_integration(dt=1, n=n_nvt, delta=1, T0=T, P0=P, Ewald=True, H=True, P=True, T=True, V=True, E=True)
+    shutil.move(os.path.join("Output", name_nvt), os.path.join("Output", name, "NVT"))
+    H = np.mean(data["H"])
+    return H
+
+def H_vs_T(name: str, N: int, T: np.ndarray, P: float, a0: float):
+    input_state, a = generate_equilibrium_state(name=name, N=N, T=T[0], P=P, a=a0)
+    with Pool() as pool:
+        H = pool.starmap(enthalpie_measurement, zip(T, repeat(name), repeat(input_state), repeat(a), repeat(P)))
+    np.save(os.path.join("Output", name, "H_vs_T"), np.array(H))
+    return H
 
 if __name__ == "__main__":
-    eps = h2O.epsilon_SI
-    #print(eps)
-    #print(ureg("kJ/mol").to("J/mol").magnitude)
-    water_molecules = [H2O(3, 300) for _ in range(15)]
-    pool = multiprocessing.Pool()
-    x = pool.map(do_something, water_molecules)
-    pool.close()
-    pool.join()
-    print(x)
-    print(x[0].O_force)
-    print(water_molecules[0].O_force)
-    water_molecules = [H2O(3, 300) for _ in range(15)]
-    for m in water_molecules:
-        m.O_force = 69
-        m.H1_force = 42
-    print(water_molecules[0].O_force)
+    name = "Eau_liquide_H_vs_T"
+    N = 100
+    P = 10
+    a0 = 18
+    T = np.arange(300, 430, 12)
+    print(T)
+    tic = time.time()
+    H = H_vs_T(name=name, N=N, T=T, P=P, a0=a0)
+    toc = time.time()
+    print(f"Time = {(toc-tic)/3600} h")
+    print(H)
 
     
 
-"""     print("Hello World")
-    atoms = ['O', 'H', 'H', 'H']
-    with open("h2O.xyz", "w") as file:
-        file.write("3\n")
-        pos = init_water(3)
-        for i in range(len(pos)):
-            file.write(f"{atoms[i]}     {pos}") """

@@ -1,5 +1,5 @@
 from H2O import H2O
-from Universe import Universe
+import Universe
 import math
 import parameters.simulation_parameters as simP
 import forces as f
@@ -88,7 +88,6 @@ def compute_forces_ewald(U: Universe, rc: float, a: float, alpha: float, c_max: 
     - c_max (int): Coefficient maximale de la sommation dans l'espace réciproque
     - rbasis (tuple): Base de l'espace réciproque
     """
-    print(c_max)
     psi = 0
     virial = 0
     psi -= alpha * U.ewald_correction

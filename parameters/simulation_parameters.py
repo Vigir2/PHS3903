@@ -1,42 +1,33 @@
 import numpy as np
-import parameters.physical_constants as pc
 
-name = "test_parallele"
-N = 100
-dim = 3
+# Paramètres de simulation #
+##########################################
+name = "test_nvt"
+N = 100 # Nombre de molécules d'eau
+dim = 3 # Dimensionalité de la simulation
+a = 18 #[Å] Taille de la cellule de simulation
+rc = 9 # [Å] Rayon de coupure pour la sommation dans l'espace réel
 
 
-a = 18 #[Ang]
-rc = 10
+# Conditions initiales
+##########################################
+security_distance = 2.7 #[Å]  Distance minimale de sécurité entre les moléccules d'eau
+T = 300 #[K] Température initiale
 
-# Basis vectors
+
+# Paramètres de cconvergence
+##########################################
+tau_p = 2500 # [fs] Temps de relaxation du barostat
+tau_t = 800 # [fs] Temps de relaxation du thermostat
+delta1 = 0.1 # [kJ/mol] Précision de  la sommation d'Ewald pour le calcul des forces  électrostatiques dans l'espace réel
+delta2 = 0.1 # [kJ/mol] Précision de  la sommation d'Ewald pour le calcul des forces  électrostatiques dans l'espace réciproque
+
+
+# Système de coordonné (Ne pas toucher)
+##########################################
 b1 = np.array([1, 0, 0])
 b2 = np.array([0, 1, 0])
 b3 = np.array([0, 0, 1])
-
 A = a*b1
 B = a*b2
 C = a*b3
-
-# Initial conditions
-##########################################
-
-security_distance = 2.7 #[Ang]
-
-
-# Thermodynamical properties
-##########################################
-
-T = 300 #[K]
-P = 10   #[bar]
-
-tau_p = 2000
-tau_t = 800
-
-
-# Ewald parameters
-########################################
-
-delta1 = 0.01
-delta2 = 0.01
-
