@@ -48,4 +48,4 @@ def gen_name() -> None:
     return n
 
 if __name__ == "__main__":
-    pass
+    print(datetime.now().isoformat())

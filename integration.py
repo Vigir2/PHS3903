@@ -1,11 +1,9 @@
-from H2O import H2O
 import Universe
 import math
 import parameters.simulation_parameters as simP
 import forces as f
 import parameters.h2O_model as h2O
 import parameters.physical_constants as pc
-import init_functions as init
 import numpy as np
 from functools import partial
 from multiprocessing import Pool
