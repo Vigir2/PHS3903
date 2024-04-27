@@ -1,0 +1,13 @@
+1) H_vs_T avec et sans Ewald
+
+1.5) Calcul de Cp(T)
+
+2) Comportement O(N^p) avec et sans Ewald (N = 20:20000) + (ns/h)
+
+3) Comportement en fonction de delta_t
+
+4) Comportement en fonction de la distance de sécurité (Conditions initiales)
+
+5) Animation (3 phases + densité)
+
+6) Effet de la masse du thermostat et du barostat et graphique (P vs t et T vs t)

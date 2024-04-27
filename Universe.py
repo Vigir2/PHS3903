@@ -286,7 +286,7 @@ class Universe:
         self.__save_state_log()
         return data
     
-    def npt_integration(self, dt: float, n: int, delta: int, T0: float, P0: float, Ewald: bool = False, graphs: bool = True, **kwargs: str) -> None:
+    def npt_integration(self, dt: float, n: int, delta: int, T0: float, P0: float, Ewald: bool = False, graphs: bool = True, **kwargs: str) -> dict:
         """
         Effectue une intégration des équations du mouvement pour un ensemble NPT avec un algorithme de Verlet vitesse
         
@@ -382,7 +382,7 @@ class Universe:
         self.__save_state_variables(data=data)
         return data
     
-    def nvt_integration(self, dt: float, n: int, delta: int, T0: float, Ewald: bool = False, graphs: bool = True, **kwargs: str) -> None:
+    def nvt_integration(self, dt: float, n: int, delta: int, T0: float, Ewald: bool = False, graphs: bool = True, **kwargs: str) -> dict:
         """
         Effectue une intégration des équations du mouvement pour un ensemble NPT avec un algorithme de Verlet vitesse
         
