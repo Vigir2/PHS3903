@@ -1,13 +1,13 @@
-1) H_vs_T avec et sans Ewald
+1) H_vs_T avec et sans Ewald (Vincent et Thomas)
 
-1.5) Calcul de Cp(T)
+1.5) Calcul de Cp(T) (Vincent et Thomas)
 
-2) Comportement O(N^p) avec et sans Ewald (N = 20:20000) + (ns/h)
+2) Comportement O(N^p) avec et sans Ewald (N = 20:20000) + (ns/h) (Vincent)
 
-3) Comportement en fonction de delta_t
+3) Comportement en fonction de delta_t (Thomas) (Écart-type en fonction de dt)
 
-4) Comportement en fonction de la distance de sécurité (Conditions initiales)
+4) Comportement en fonction de la distance de sécurité (Conditions initiales) (Thomas)
 
-5) Animation (3 phases + densité)
+5) Animation (3 phases + densité) (Formation glace et ou évaporation)
 
-6) Effet de la masse du thermostat et du barostat et graphique (P vs t et T vs t)
+6) Effet de la masse du thermostat et du barostat et graphique (P vs t et T vs t) (Thomas)

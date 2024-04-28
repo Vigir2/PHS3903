@@ -52,6 +52,9 @@ def only_nvt(T, name, P):
     H = np.mean(data["H"])
     return H
 
+def time_vs_N(N, name, ):
+    pass
+
 if __name__ == "__main__":
     name = "Eau_liquide_H_vs_T_new"
     N = 100
