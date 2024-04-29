@@ -11,3 +11,11 @@
 5) Animation (3 phases + densité) (Formation glace et ou évaporation)
 
 6) Effet de la masse du thermostat et du barostat et graphique (P vs t et T vs t) (Thomas)
+
+7) P et T en fonction du temps en fonction de la phase
+
+
+Section 4
+- Limite en temps (ns / jours), single thread
+- Limite en nombre de molécules, graphique de t vs N
+- 

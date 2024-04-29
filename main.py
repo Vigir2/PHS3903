@@ -52,10 +52,25 @@ def only_nvt(T, name, P):
     H = np.mean(data["H"])
     return H
 
-def time_vs_N(N, name, ):
-    pass
+def time_vs_N(N, name, T0, a, Ewald):
+    name_t = name + f"_N{N}"
+    U = Universe(name=name_t, N=N, a=a, T=T0)
+    tic = time.time()
+    U.nve_integration(dt=1, n=300, delta=1, Ewald=Ewald, graphs=False, E=True)
+    toc = time.time()
+    shutil.move(os.path.join("Output", name_t), os.path.join("Output", name, name_t))
+    return (toc-tic)
 
-if __name__ == "__main__":
+def nvt_measurement(T, name, N, a, Ewald):
+    name_nvt = name + f"_T{T}"
+    U = Universe(name=name_nvt, N=N, a=a, T=10)
+    data = U.nvt_integration(dt=1.5, n=5000, delta=1, T0=T, Ewald=Ewald, graphs=False, T=True, E=True, P=True)
+    shutil.move(os.path.join("Output", name_nvt), os.path.join("Output", name, name_nvt))
+    E = np.mean(data["E"][len(data["E"])//2:])
+    T = np.mean(data["T"][len(data["T"])//2:])
+    return E, T
+
+""" if __name__ == "__main__":
     name = "Eau_liquide_H_vs_T_new"
     N = 100
     P = 10
@@ -67,7 +82,45 @@ if __name__ == "__main__":
     toc = time.time()
     print(f"Time = {(toc-tic)/3600} h")
     print(Results[:,0])
-    print(Results[:,1])
+    print(Results[:,1]) """
+
+""" if __name__ == "__main__":
+    name = "Temps_Ewald_NVE_a30_rc15_no_parallel"
+    N = np.array([20, 40, 60, 80, 100, 125, 150, 175, 200, 250, 300])
+    print(N)
+    a0 = 30
+    T = 300
+    with Pool() as pool:
+        t = pool.starmap(time_vs_N, zip(N, repeat(name), repeat(T), repeat(a0), repeat(False)))
+    t = list(map(time_vs_N, N, repeat(name), repeat(T), repeat(a0), repeat(True)))
+    print(f"t = {t}")
+    np.save(os.path.join("Output", name, "t_vs_N.npy"), np.array(t))
+    np.save(os.path.join("Output", name, "N.npy"), N)
+ """
+        
+if __name__ == "__main__":
+    name = "test"
+    a = 17
+    N = 96
+    
+    # T = np.linspace(10, 100, 12)
+    # T = np.linspace(110, 200, 12)
+    # T = np.linspace(210, 300, 12)
+    # T = np.linspace(310, 400, 12)
+    # T = np.linspace(410, 500, 12)
+
+    print(f"{T = }")
+    Ewald = True
+    with Pool(6) as pool:
+        Results = pool.starmap(nvt_measurement, zip(T, repeat(name), repeat(N), repeat(a), repeat(Ewald)))
+    Results = np.array(Results)
+    E = Results[:,0]
+    T = Results[:,1]
+    print(f"{E = }")
+    print(f"{T = }")
+    np.save(os.path.join("Output", name, "E.npy"), E)
+    np.save(os.path.join("Output", name, "T.npy"), T)
+
 
     
 

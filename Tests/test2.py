@@ -23,5 +23,8 @@ def main():
 
 
 if __name__=="__main__":
-    freeze_support()
-    main()
+    # freeze_support()
+    # main()
+    a = 6
+    b = 9
+    print(f"{a + b = }")

@@ -59,7 +59,7 @@ class Universe:
                     while (np.any([np.linalg.norm(integ.minimum_image(cm - m.cm_pos(), a = self.a)) < simP.security_distance for cm in self.cm])):
                         m.rand_position(a = self.a)
                         n += 1
-                        if n >= 100:
+                        if n >= 500:
                             print(log.init_error.format(name = self.name) + log.error_water_placement.format(N = self.N, a = self.a, security_distance = simP.security_distance))
                             sys.exit()
                     self.cm = np.append(self.cm, m.cm_pos().reshape(1,self.dim), axis=0)
@@ -489,7 +489,7 @@ class Universe:
 
 
 if __name__ == "__main__":
-    U = Universe(name = simP.name, N = simP.N, T = simP.T, a = simP.a, dim=simP.dim)
+    #U = Universe(name = simP.name, N = simP.N, T = simP.T, a = simP.a, dim=simP.dim)
     #U.nvt_integration(dt=1, n=200, delta=1, T0=300, Ewald=True, graphs=True, T=True, E=True, P=True, H=True)
     #input_state = U.get_state()[0]
     #U2 = Universe(name = simP.name, a = simP.a, input_state=input_state)
@@ -497,9 +497,10 @@ if __name__ == "__main__":
     #x = input()
     #U.nve_integration(dt=1, n=50, delta=1, Ewald=True, parallel=False, graphs=True, E=True, T = True, P = True)
     #U = Universe(name="glace_formation", a=14.87832291048, input_state="Output\\test_ewald\\state_log\\test_ewald.npy")
-    U.nvt_integration(dt = 1, n = 30, delta = 1, T0 = 300, graphs=False, T=True, P=True, V=True, E=True, Ewald=True)
+    #U.nvt_integration(dt = 1, n = 30, delta = 1, T0 = 300, graphs=False, T=True, P=True, V=True, E=True, Ewald=True)
 
     #U.nve_integration(dt=1, n=2, delta=1, graphs=False, E=False, P=False, T=False)
     #U.npt_integration(1, 4000, 1, 150, 1, "V", "P", "T")
-    
+    U = Universe("NVT_N96_a14.8_T200", N=96, a=14.8, T=10)
+    U.nvt_integration(dt=1.2, n=5000, delta=1, T0=200, Ewald=True, graphs=True, T=True, P = True, E = True)
 
